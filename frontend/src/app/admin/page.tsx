@@ -5,16 +5,12 @@ import {
   Banknote,
   Check,
   Clock3,
-  CreditCard,
   Delete,
   Edit3,
   LockKeyhole,
   LogOut,
   MailCheck,
-  Package,
   Search,
-  ShieldCheck,
-  ShoppingCart,
   Truck,
   X,
 } from 'lucide-react';
@@ -190,7 +186,7 @@ export default function AdminPage() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'email-log'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'invoices'>('orders');
   const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
@@ -613,12 +609,11 @@ export default function AdminPage() {
           {[
             { key: 'orders', label: 'Rendelések' },
             { key: 'invoices', label: 'Számlák' },
-            { key: 'email-log', label: 'E-mail log' },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'email-log')}
+              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices')}
               className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
                 activeTab === tab.key
                   ? 'bg-[#2d2922] text-white'
@@ -669,75 +664,6 @@ export default function AdminPage() {
 
         {activeTab === 'orders' && (
           <>
-        <section className="mb-8 grid gap-4 md:grid-cols-4">
-          <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Összes rendelés</p>
-              <Package className="h-5 w-5 text-[#4a4339]" />
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">{orders.length}</p>
-          </div>
-          <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Függőben</p>
-              <Clock3 className="h-5 w-5 text-[#7b5e2f]" />
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
-              {orders.filter((order) => getOrderStatusValue(order) === 'pending').length}
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Feldolgozás</p>
-              <ShoppingCart className="h-5 w-5 text-[#2955b1]" />
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
-              {orders.filter((order) => getOrderStatusValue(order) === 'processing').length}
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
-            <div className="flex items-center justify-between">
-            <p className="text-sm text-[#6d655d]">Teljesítve</p>
-            <ShieldCheck className="h-5 w-5 text-[#1d7d51]" />
-          </div>
-          <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
-              {orders.filter((order) => getOrderStatusValue(order) === 'completed').length}
-            </p>
-          </div>
-        </section>
-
-        <section className="mb-8 grid gap-4 md:grid-cols-3">
-          <a
-            href="http://127.0.0.1:8090/_/"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 text-left shadow-[0_12px_30px_rgba(35,28,21,0.04)] transition hover:border-[#c6b89d]"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">PocketBase admin</p>
-              <LockKeyhole className="h-5 w-5 text-[#473f36]" />
-            </div>
-            <p className="mt-4 text-lg font-medium text-[#2d2922]">Megnyitás a PocketBase dashboardban</p>
-          </a>
-
-          <div className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">E-mail rendszer</p>
-              <MailCheck className="h-5 w-5 text-[#2a7b46]" />
-            </div>
-            <p className="mt-4 text-lg font-medium text-[#2d2922]">Resend + PocketBase aktiv</p>
-            <p className="mt-2 text-sm text-[#5d564f]">Vevői és admin értesítő üzenetek automatikusan indulnak.</p>
-          </div>
-
-          <div className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Státusz kezelő</p>
-              <CreditCard className="h-5 w-5 text-[#473f36]" />
-            </div>
-<p className="mt-4 text-lg font-medium text-[#2d2922]">Visszavonás, törlés és számlakezelés közvetlenül az adminból</p>
-          </div>
-        </section>
-
         <div className="mb-5 flex flex-wrap gap-2">
           {ORDER_FILTER_OPTIONS.map((filter) => (
             <button
@@ -1049,47 +975,6 @@ export default function AdminPage() {
           </section>
         )}
 
-        {activeTab === 'email-log' && (
-          <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">E-mail log</p>
-                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">Kiküldött értesítések</h2>
-              </div>
-              <div className="rounded-full bg-[#eff8f0] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#2b7a4a]">
-                {emailLog.length} bejegyzés
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {emailLog.length === 0 ? (
-                <div className="rounded-[22px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-6 text-sm text-[#5d564f]">
-                  Még nincs kiküldött e-mail log.
-                </div>
-              ) : (
-                emailLog.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex flex-col gap-2 rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <div className="text-sm font-semibold text-[#2d2922]">{entry.subject}</div>
-                      <div className="mt-1 text-xs text-[#5d564f]">
-                        {entry.customerName} · {entry.recipient}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[#e8f0ff] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2955b1]">
-                        {entry.type === 'customer' ? 'vevő' : entry.type === 'admin' ? 'admin' : 'számla'}
-                      </span>
-                      <span className="text-xs text-[#6b625b]">{new Date(entry.sentAt).toLocaleString('hu-HU')}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        )}
       </main>
 
       {editingOrder && (

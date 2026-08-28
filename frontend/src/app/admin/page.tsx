@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Clock3, LockKeyhole, LogOut, Package, Search, ShieldCheck, Truck } from 'lucide-react';
+import {
+  Check,
+  CheckCheck,
+  Clock3,
+  LockKeyhole,
+  LogOut,
+  MailCheck,
+  Package,
+  Search,
+  ShieldCheck,
+  Truck,
+} from 'lucide-react';
 import Header from '@/components/Header';
 import { pb } from '@/lib/pocketbase';
 
@@ -37,6 +48,8 @@ const makeOrderStatus = (order: OrderRecord) => {
   return 'Folyamatban';
 };
 
+type StatusFilter = 'all' | 'pending' | 'paid';
+
 export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +58,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const fetchOrders = async () => {
@@ -102,12 +117,32 @@ export default function AdminPage() {
     setPassword('');
   };
 
+  const handleUpdateOrderStatus = async (orderId: string, nextStatus: 'pending' | 'paid') => {
+    setUpdatingOrderId(orderId);
+
+    try {
+      await pb.collection('orders').update(orderId, {
+        payment_status: nextStatus,
+        status: nextStatus,
+      });
+
+      await fetchOrders();
+    } catch (error) {
+      console.error('Rendelés állapot frissítése sikertelen:', error);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    if (!query) return orders;
-
     return orders.filter((order) => {
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'paid' && (order.payment_status === 'paid' || order.status === 'paid')) ||
+        (statusFilter === 'pending' && order.payment_status !== 'paid' && order.status !== 'paid');
+
       const haystack = [
         order.customer_name,
         order.customer_email,
@@ -120,9 +155,10 @@ export default function AdminPage() {
         .join(' ')
         .toLowerCase();
 
-      return haystack.includes(query);
+      const matchesQuery = !query || haystack.includes(query);
+      return matchesStatus && matchesQuery;
     });
-  }, [orders, search]);
+  }, [orders, search, statusFilter]);
 
   if (!isAuthenticated) {
     return (
@@ -210,7 +246,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="flex w-full max-w-xl items-center justify-end gap-3">
+          <div className="flex w-full max-w-2xl items-center justify-end gap-3">
             <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-[#e2dccf] bg-white px-4 py-3 shadow-sm">
               <Search className="h-4 w-4 text-[#726b62]" />
               <input
@@ -259,6 +295,55 @@ export default function AdminPage() {
             </p>
           </div>
         </section>
+
+        <section className="mb-8 grid gap-4 md:grid-cols-3">
+          <a
+            href="http://127.0.0.1:8090/_/"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 text-left shadow-[0_12px_30px_rgba(35,28,21,0.04)] transition hover:border-[#c6b89d]"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[#6d655d]">PocketBase admin</p>
+              <LockKeyhole className="h-5 w-5 text-[#473f36]" />
+            </div>
+            <p className="mt-4 text-lg font-medium text-[#2d2922]">Megnyitás a PocketBase dashboardban</p>
+          </a>
+
+          <div className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[#6d655d]">E-mail rendszer</p>
+              <MailCheck className="h-5 w-5 text-[#2a7b46]" />
+            </div>
+            <p className="mt-4 text-lg font-medium text-[#2d2922]">Resend + PocketBase aktiv</p>
+            <p className="mt-2 text-sm text-[#5d564f]">Vevői és admin e-mail értesítés automatikusan indul.</p>
+          </div>
+
+          <div className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[#6d655d]">Rendelés műveletek</p>
+              <CheckCheck className="h-5 w-5 text-[#473f36]" />
+            </div>
+            <p className="mt-4 text-lg font-medium text-[#2d2922]">Változtasd a rendelés státuszát közvetlenül</p>
+          </div>
+        </section>
+
+        <div className="mb-5 flex flex-wrap gap-2">
+          {(['all', 'pending', 'paid'] as StatusFilter[]).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setStatusFilter(filter)}
+              className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                statusFilter === filter
+                  ? 'bg-[#2d2922] text-white'
+                  : 'border border-[#ddd0c0] bg-white text-[#2d2922] hover:border-[#a35e29]'
+              }`}
+            >
+              {filter === 'all' ? 'Összes' : filter === 'pending' ? 'Függőben' : 'Fizetve'}
+            </button>
+          ))}
+        </div>
 
         <section className="overflow-hidden rounded-[28px] border border-[#e3ded3] bg-white shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
           <div className="overflow-x-auto">
@@ -320,10 +405,25 @@ export default function AdminPage() {
                       </td>
                       <td className="px-5 py-4 font-semibold text-[#2d2922]">{fmtMoney(order.total_price)}</td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-semibold ${statusStyles[order.status ?? 'pending']}`}>
-                          {order.status === 'paid' ? <Check className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
-                          {makeOrderStatus(order)}
-                        </span>
+                        <div className="flex flex-col gap-2">
+                          <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-semibold ${statusStyles[order.status ?? 'pending']}`}>
+                            {order.status === 'paid' ? <Check className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+                            {makeOrderStatus(order)}
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={updatingOrderId === order.id}
+                            onClick={() => handleUpdateOrderStatus(order.id, order.status === 'paid' ? 'pending' : 'paid')}
+                            className="rounded-full border border-[#d8cab1] bg-[#f8f4ee] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] transition hover:border-[#a35e29] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {updatingOrderId === order.id
+                              ? 'Frissítés...'
+                              : order.status === 'paid'
+                                ? 'Visszaállítás függőbenre'
+                                : 'Megjelölés fizetve'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

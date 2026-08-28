@@ -69,21 +69,29 @@ export default function Header() {
           <a
             href="/"
             aria-label="Zsül Portékái kezdőlap"
-            className="group relative flex h-full items-center py-2 transition-transform duration-300"
+            className="group relative flex h-full items-center gap-3 py-2 transition-transform duration-300"
           >
             <div
               className={`relative flex items-center justify-center transition-all duration-300 ease-out ${
-                isScrolled ? 'h-10 w-28 sm:w-32' : 'h-14 w-36 sm:w-40'
+                isScrolled ? 'h-10 w-10 sm:w-11' : 'h-12 w-12 sm:w-14'
               }`}
             >
               <Image
                 src={logoUrl}
                 alt="Zsül Portékái Kistermelői Manufaktúra"
                 fill
-                sizes="(max-width: 640px) 130px, 160px"
+                sizes="(max-width: 640px) 48px, 56px"
                 priority
                 className="object-contain object-left mix-blend-multiply transition-all duration-300 group-hover:scale-105 group-hover:brightness-95"
               />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8e806e]">
+                Kistermelői manufaktúra
+              </span>
+              <span className="mt-1 text-base font-semibold tracking-[-0.04em] text-[#2d2922] sm:text-lg">
+                Zsül Portékái
+              </span>
             </div>
           </a>
 

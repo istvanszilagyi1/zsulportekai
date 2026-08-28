@@ -6,10 +6,10 @@ const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
 export const metadata: Metadata = {
-  title: "Zsül Portékái Webshop",
+  title: "Zsül Portékái",
   description: "Egyedi kézműves termékek",
   icons: {
-    icon: logoUrl,
+    icon: [{ url: logoUrl, rel: "icon" }],
   },
 };
 

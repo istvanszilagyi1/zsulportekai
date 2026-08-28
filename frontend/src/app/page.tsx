@@ -144,7 +144,8 @@ function inferProductCategory(value: string): CategoryFilter {
     lower.includes('szörp') ||
     lower.includes('szorp') ||
     lower.includes('berkenye') ||
-    lower.includes('homoktövis')
+    lower.includes('homoktövis') ||
+    lower.includes('gyümölcs')
   ) {
     return 'szorpok';
   }
@@ -152,7 +153,8 @@ function inferProductCategory(value: string): CategoryFilter {
   if (
     lower.includes('liszt') ||
     lower.includes('búza') ||
-    lower.includes('gabona')
+    lower.includes('gabona') ||
+    lower.includes('tönköly')
   ) {
     return 'lisztek';
   }
@@ -162,12 +164,23 @@ function inferProductCategory(value: string): CategoryFilter {
     lower.includes('napraforgó') ||
     lower.includes('tök') ||
     lower.includes('mák') ||
-    lower.includes('dió')
+    lower.includes('dió') ||
+    lower.includes('mag')
   ) {
     return 'olajok';
   }
 
-  return 'all';
+  return 'olajok';
+}
+
+function resolveProductCategory(product: Partial<ProductRecord>): CategoryFilter {
+  const rawCategory = (product.category ?? '').trim().toLowerCase();
+
+  if (rawCategory.includes('szörp') || rawCategory.includes('szorp')) return 'szorpok';
+  if (rawCategory.includes('liszt')) return 'lisztek';
+  if (rawCategory.includes('olaj')) return 'olajok';
+
+  return inferProductCategory(`${product.title ?? ''} ${product.description ?? ''} ${rawCategory}`);
 }
 
 function decodeHtmlEntities(value: string) {
@@ -284,12 +297,7 @@ export default function HomePage() {
     }
 
     return source.filter((product) => {
-      const productCategory = inferProductCategory(
-        `${product.category ?? ''} ${product.title ?? ''} ${
-          product.description ?? ''
-        }`,
-      );
-
+      const productCategory = resolveProductCategory(product);
       return productCategory === selectedCategory;
     });
   }, [products, selectedCategory]);
@@ -451,11 +459,7 @@ export default function HomePage() {
 
                   const isJustAdded = addedId === product.id;
 
-                  const category = inferProductCategory(
-                    `${product.category ?? ''} ${product.title ?? ''} ${
-                      product.description ?? ''
-                    }`,
-                  );
+                  const category = resolveProductCategory(product);
 
                   return (
                     <article
@@ -577,11 +581,7 @@ export default function HomePage() {
 
                 <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
-                    {categoryName(
-                      inferProductCategory(
-                        `${selectedProduct.category ?? ''} ${selectedProduct.title ?? ''} ${selectedProduct.description ?? ''}`,
-                      ),
-                    )}
+                    {categoryName(resolveProductCategory(selectedProduct))}
                   </p>
 
                   <h3 className="mt-4 text-3xl font-medium tracking-[-0.04em] text-[#2d2923] sm:text-4xl">

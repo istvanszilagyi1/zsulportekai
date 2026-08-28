@@ -757,9 +757,66 @@ export default function HomePage() {
         </section>
 
         {/* =========================================================
+            MARKET / WHOLESALE SECTION
+        ========================================================== */}
+        <section className="px-6 py-20 sm:px-10 sm:py-28 lg:px-16 lg:py-32">
+          <div className="mx-auto max-w-[1250px] rounded-[30px] border border-[#e1d8c9] bg-[#f3eee7] p-6 shadow-[0_18px_40px_rgba(38,30,22,0.04)] sm:p-8 lg:p-12">
+            <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b7266]">
+                  03 — Vásárok és viszonteladók
+                </p>
+                <h2 className="mt-4 text-3xl font-medium leading-none tracking-[-0.05em] text-[#2a2723] sm:text-4xl lg:text-5xl">
+                  Hol találkozhatsz velünk?
+                </h2>
+              </div>
+
+              <p className="max-w-xl text-sm leading-7 text-[#665f54]">
+                A piacokon és vásárokon lehetőség nyílik arra, hogy személyesen is találkozzunk, beszélgessünk, és segítsünk eligazodni a termékeink között.
+              </p>
+            </div>
+
+            <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-[24px] bg-[#f8f4ee] p-5 sm:p-6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#796f62]">
+                  Piaci jelenlétünk
+                </p>
+
+                <ul className="mt-6 space-y-4 text-sm leading-7 text-[#4b453f]">
+                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap első szombatján:</strong> Debrecen Liget tér 8–11.30, Debrecen Kerekestelep Platán hotel melletti játszótér 8–11.30</li>
+                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap második szombatján:</strong> Debrecen Ruyter utca, Derce pékműhely udvara 8–11.30; Hajdúböszörmény Fürdőkerti vásár, Bíró Péter utca 7–12; Újfehértó Zsindelyes Cottage termelői piac 8–11.30</li>
+                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap második péntekjén:</strong> Hajdúböszörmény Ady téri piac 7–11</li>
+                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap harmadik szombatján:</strong> Debrecen Leány utca 2, egyháztáji vásár 8–11.30</li>
+                  <li><strong className="font-semibold text-[#2a2723]">Minden vasárnap:</strong> Balmazújvárosi piac 7–11</li>
+                </ul>
+
+                <p className="mt-6 text-sm leading-7 text-[#5e584f]">
+                  A vásári jelenlétünk hónapról hónapra frissül, az időpontokat és a pontos helyszíneket Facebook oldalunkon találod meg.
+                </p>
+              </div>
+
+              <div className="rounded-[24px] bg-[#2d2923] p-5 text-[#f7f4ed] sm:p-6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/60">
+                  Viszonteladó partnereink
+                </p>
+
+                <ul className="mt-6 space-y-4 text-sm leading-7 text-white/80">
+                  <li>Hajdúböszörmény – Csuporka bolt, Petőfi Sándor utca 15.</li>
+                  <li>Hajdúböszörmény – Kálvin téri zöldséges bolt, Kálvin tér 20.</li>
+                  <li>Hajdúböszörmény – Mosolygó zöldség-gyümölcs, Külső-Hadházi utca 19.</li>
+                  <li>Józsai piac – Tóth Józsefné viszonteladó, kedd, csütörtök, péntek.</li>
+                  <li>Hajdúhadház piac – Tóth Józsefné viszonteladó, szombatonként.</li>
+                  <li>Debrecen – Egyháztáji Delikátesz, Hatvan utca 1/A.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
             FULL WIDTH STORY IMAGE
         ========================================================== */}
-        <section className="relative overflow-hidden">
+        <section id="story" className="relative overflow-hidden scroll-mt-20">
           <div className="group relative h-[620px] sm:h-[720px] lg:h-[820px]">
             <img
               src={syrupImage}
@@ -778,6 +835,8 @@ export default function HomePage() {
                 </p>
 
                 <h2 className="mt-4 max-w-4xl text-4xl font-medium leading-[0.98] tracking-[-0.045em] text-white sm:text-5xl md:text-6xl lg:text-7xl">
+                  Hogyan készül?
+                  <br />
                   A családi gazdaságtól
                   <br />
                   az asztalodig.
@@ -1071,7 +1130,7 @@ export default function HomePage() {
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
-                Elérhetőségeink:
+                Kapcsolat:
               </p>
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
@@ -1082,6 +1141,16 @@ export default function HomePage() {
                 <a href="mailto:zsulportekai@gmail.com" className="block transition hover:text-white">
                   E-mail: zsulportekai@gmail.com
                 </a>
+              </div>
+
+              <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-[#1d1b18]">
+                <iframe
+                  title="Zsül Portékái elhelyezkedése"
+                  src="https://www.google.com/maps?q=4220%20Hajd%C3%BAb%C3%B6sz%C3%B6rm%C3%A9ny%2C%20Kisb%C3%B6sz%C3%B6rm%C3%A9ny%20utca%203&output=embed"
+                  className="h-56 w-full border-0 grayscale contrast-125"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
             </div>
 

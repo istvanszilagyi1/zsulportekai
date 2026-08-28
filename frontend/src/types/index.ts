@@ -21,6 +21,11 @@ export interface OrderPayload {
   delivery_method: 'foxpost' | 'home_delivery';
   payment_method: PaymentMethod;
   payment_status: 'pending' | 'paid';
+  invoice_required?: boolean;
+  invoice_company_name?: string;
+  invoice_tax_number?: string;
+  invoice_address?: string;
+  invoice_email?: string;
   foxpost_place_id?: string;
   foxpost_place_name?: string;
   foxpost_place_address?: string;

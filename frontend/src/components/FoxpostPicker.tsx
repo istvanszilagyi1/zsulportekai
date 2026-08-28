@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, PencilLine } from 'lucide-react';
+import { Check, MapPin, PencilLine } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export type FoxpostSelection = {
@@ -13,7 +13,18 @@ type FoxpostPickerProps = {
   onSelect: (selection: FoxpostSelection) => void;
 };
 
-const FOXPOST_ORIGIN_PATTERN = /^https?:\/\/([a-z0-9-]+\.)*foxpost\.hu$/i;
+const isFoxpostOrigin = (origin: string) => /foxpost\.hu$/i.test(origin) || /foxpost\.hu\b/i.test(origin);
+
+const extractFoxpostValue = (source: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
+};
 
 export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
   const [selected, setSelected] = useState<FoxpostSelection | null>(null);
@@ -22,32 +33,43 @@ export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const data = event.data;
-
       if (!data || typeof data !== 'object') {
         return;
       }
 
       const origin = event.origin ?? '';
-
-      if (!FOXPOST_ORIGIN_PATTERN.test(origin)) {
+      if (!isFoxpostOrigin(origin)) {
         return;
       }
 
-      const rawPlaceId = data.place_id ?? data.placeId ?? data.id;
-      const rawName = data.name;
-      const rawAddress = data.address;
+      const nested =
+        (data.place && typeof data.place === 'object' ? (data.place as Record<string, unknown>) : undefined) ??
+        (data.selectedPlace && typeof data.selectedPlace === 'object'
+          ? (data.selectedPlace as Record<string, unknown>)
+          : undefined) ??
+        (data.location && typeof data.location === 'object'
+          ? (data.location as Record<string, unknown>)
+          : undefined) ??
+        {};
 
-      if (
-        rawPlaceId === undefined ||
-        rawPlaceId === null ||
-        rawName === undefined ||
-        rawAddress === undefined
-      ) {
+      const rawPlaceId =
+        extractFoxpostValue(data as Record<string, unknown>, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id']) ??
+        extractFoxpostValue(nested, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id']);
+
+      const rawName =
+        extractFoxpostValue(data as Record<string, unknown>, ['name', 'place_name', 'point_name']) ??
+        extractFoxpostValue(nested, ['name', 'place_name', 'point_name']);
+
+      const rawAddress =
+        extractFoxpostValue(data as Record<string, unknown>, ['address', 'full_address', 'addressText']) ??
+        extractFoxpostValue(nested, ['address', 'full_address', 'addressText']);
+
+      if (rawPlaceId === undefined || rawName === undefined || rawAddress === undefined) {
         return;
       }
 
       const nextSelection: FoxpostSelection = {
-        id: String(rawPlaceId),
+        id: String(rawPlaceId).trim(),
         name: String(rawName).trim(),
         address: String(rawAddress).trim(),
       };
@@ -70,6 +92,15 @@ export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
 
   return (
     <div className="space-y-4">
+      {!selected && (
+        <div className="rounded-[22px] border border-dashed border-[#d0c6b7] bg-[#faf8f5] p-4 text-sm text-[#5b544d]">
+          <p className="font-medium text-[#2d2922]">Válassza ki az átvételi pontot</p>
+          <p className="mt-1 leading-6">
+            A Foxpost automata kiválasztása után a rendeléshez a pontos cím és a csomagautomatás hely megadása automatikusan rögzítésre kerül.
+          </p>
+        </div>
+      )}
+
       {showPicker && (
         <div className="overflow-hidden rounded-[22px] border border-[#d9d3c8] bg-white shadow-[0_10px_24px_rgba(39,33,26,0.06)]">
           <iframe
@@ -90,10 +121,11 @@ export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#3c7a55]">
-                Kiválasztott automata
+                Kiválasztott átvételi pont
               </p>
 
-              <p className="mt-2 text-base font-semibold text-[#183b2b]">
+              <p className="mt-2 flex items-center gap-2 text-base font-semibold text-[#183b2b]">
+                <MapPin className="h-4 w-4" strokeWidth={2} />
                 {selected.name}
               </p>
 

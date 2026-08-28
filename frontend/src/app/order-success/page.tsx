@@ -30,7 +30,7 @@ function OrderSuccessContent() {
         <p className="mt-5 max-w-lg text-base leading-7 text-[#675f57]">
           {isPaid
             ? 'Az online fizetés sikeresen lezárult. A rendelésedet rögzítettük és feldolgozásra került.'
-            : 'A rendelésedet rögzítettük. A banki átutalási adataidat elküldjük a megadott e-mail címre, és az admin jóváhagyása után folytatjuk a feldolgozást.'}
+            : 'A rendelésedet rögzítettük. A banki átutalási részleteket elküldjük a megadott e-mail címre, és a rendelés feldolgozása a befizetés ellenőrzését követően kezdődik meg.'}
         </p>
 
         <div className="mt-8 rounded-[22px] border border-[#e8e0d4] bg-[#faf8f5] p-4 sm:p-5">

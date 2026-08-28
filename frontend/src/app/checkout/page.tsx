@@ -54,7 +54,7 @@ const paymentOptions: Array<{
   {
     value: 'bank_transfer',
     label: 'Banki átutalás',
-    description: 'Az admin jóváhagyása után folytatódik a rendelés.',
+    description: 'A megrendelés leadása után a banki utalás adatai elküldésre kerül, és a rendelés feldolgozása a befizetés ellenőrzése után kezdődik.',
     icon: Landmark,
   },
   {
@@ -79,6 +79,11 @@ export default function CheckoutPage() {
     city: '',
     street: '',
     zip: '',
+    companyName: '',
+    taxNumber: '',
+    invoiceAddress: '',
+    invoiceEmail: '',
+    wantsInvoice: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -108,7 +113,15 @@ export default function CheckoutPage() {
     }
 
     if (deliveryMethod === 'foxpost' && !foxpostSelection) {
-      setError('Kérjük, válassz Foxpost automatát.');
+      setError('Kérjük, válassz ki a Foxpost csomagautomata helyét.');
+      return;
+    }
+
+    if (
+      formData.wantsInvoice &&
+      (!formData.companyName.trim() || !formData.taxNumber.trim() || !formData.invoiceAddress.trim())
+    ) {
+      setError('A számla kiállításához add meg a cég neve, adószám és számlázási cím mezőket.');
       return;
     }
 
@@ -131,6 +144,11 @@ export default function CheckoutPage() {
         delivery_method: deliveryMethod,
         payment_method: paymentMethod,
         payment_status: isPaid ? 'paid' : 'pending',
+        invoice_required: formData.wantsInvoice,
+        invoice_company_name: formData.wantsInvoice ? formData.companyName.trim() : undefined,
+        invoice_tax_number: formData.wantsInvoice ? formData.taxNumber.trim() : undefined,
+        invoice_address: formData.wantsInvoice ? formData.invoiceAddress.trim() : undefined,
+        invoice_email: formData.wantsInvoice ? formData.invoiceEmail.trim() || formData.email.trim() : undefined,
         items: cart.map(({ product, quantity }) => ({
           id: product.id,
           title: product.title,
@@ -275,6 +293,10 @@ export default function CheckoutPage() {
                 </h2>
               </div>
 
+              <div className="mb-5 rounded-[20px] border border-[#e7e0d4] bg-[#faf8f4] p-4 text-sm leading-6 text-[#5e564d]">
+                A Foxpost automata kiválasztásánál a legközelebbi átvételi pontot választhatod ki a megjelenő alkalmazásban. A kiválasztott hely automatikusan mentésre kerül a rendeléshez.
+              </div>
+
               <div className="space-y-3">
                 {deliveryOptions.map(({ value, label, description, icon: Icon }) => {
                   const selected = deliveryMethod === value;
@@ -411,6 +433,74 @@ export default function CheckoutPage() {
                   );
                 })}
               </div>
+
+              <div className="mt-6 rounded-[22px] border border-[#e8e0d5] bg-[#faf8f5] p-4 text-sm leading-6 text-[#5d554d]">
+                A rendelés leadása után a banki átutalás részleteit e-mailben elküldjük. A fizetési igazolás megérkezése után kezdődik meg a kiszállítás vagy az átvétel előkészítése.
+              </div>
+
+              <div className="mt-6 flex items-center gap-3 rounded-[18px] border border-[#e3ded3] bg-white p-3">
+                <input
+                  id="wantsInvoice"
+                  type="checkbox"
+                  checked={formData.wantsInvoice}
+                  onChange={(event) =>
+                    setFormData((current) => ({
+                      ...current,
+                      wantsInvoice: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 accent-[#2d2922]"
+                />
+                <label htmlFor="wantsInvoice" className="text-sm font-medium text-[#2d2922]">
+                  Számlát kérek a rendelésre
+                </label>
+              </div>
+
+              {formData.wantsInvoice && (
+                <div className="mt-5 grid gap-5 rounded-[22px] border border-[#e0d8cb] bg-[#faf8f5] p-4 sm:grid-cols-2 sm:p-5">
+                  <label className="flex flex-col gap-2 sm:col-span-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Cégnév</span>
+                    <input
+                      value={formData.companyName}
+                      onChange={(event) => updateField('companyName', event.target.value)}
+                      placeholder="Zsül Portékái Kft."
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Adószám</span>
+                    <input
+                      value={formData.taxNumber}
+                      onChange={(event) => updateField('taxNumber', event.target.value)}
+                      placeholder="12345678-2-10"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Számla e-mail</span>
+                    <input
+                      type="email"
+                      value={formData.invoiceEmail}
+                      onChange={(event) => updateField('invoiceEmail', event.target.value)}
+                      placeholder="szamla@pelda.hu"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2 sm:col-span-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Számlázási cím</span>
+                    <textarea
+                      value={formData.invoiceAddress}
+                      onChange={(event) => updateField('invoiceAddress', event.target.value)}
+                      placeholder="1234 Budapest, Példa utca 13."
+                      rows={3}
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+                </div>
+              )}
             </section>
           </div>
 
@@ -437,6 +527,9 @@ export default function CheckoutPage() {
                           src={product.image || '/placeholder.png'}
                           alt={product.title}
                           className="h-full w-full object-cover"
+                          onError={(event) => {
+                            event.currentTarget.src = 'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
+                          }}
                         />
                       </div>
 

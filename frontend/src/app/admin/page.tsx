@@ -2,22 +2,30 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Banknote,
   Check,
-  CheckCheck,
   Clock3,
+  CreditCard,
+  Delete,
+  Edit3,
   LockKeyhole,
   LogOut,
   MailCheck,
   Package,
   Search,
   ShieldCheck,
+  ShoppingCart,
   Truck,
+  X,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import { pb } from '@/lib/pocketbase';
 
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
+
+type OrderStatus = 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled' | 'refunded';
+type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
 type OrderRecord = {
   id: string;
@@ -26,29 +34,95 @@ type OrderRecord = {
   customer_phone: string;
   delivery_method: 'foxpost' | 'home_delivery';
   payment_method: 'bank_transfer' | 'stripe';
-  payment_status: 'pending' | 'paid';
-  status: 'pending' | 'paid';
+  payment_status: PaymentStatus;
+  status: OrderStatus;
   total_price?: number;
   items?: Array<{ title?: string; quantity?: number; price?: number }>;
+  foxpost_place_id?: string;
   foxpost_place_name?: string;
   foxpost_place_address?: string;
   shipping_address?: string;
+  invoice_required?: boolean;
+  invoice_company_name?: string;
+  invoice_tax_number?: string;
+  invoice_address?: string;
+  invoice_email?: string;
   created?: string;
 };
 
-const statusStyles: Record<string, string> = {
+const ORDER_STATUS_OPTIONS: OrderStatus[] = [
+  'pending',
+  'paid',
+  'processing',
+  'shipped',
+  'completed',
+  'cancelled',
+  'refunded',
+];
+
+const ORDER_FILTER_OPTIONS = ['all', 'pending', 'paid', 'processing', 'shipped', 'completed', 'cancelled', 'refunded'] as const;
+type StatusFilter = (typeof ORDER_FILTER_OPTIONS)[number];
+const SHIPPED_STATUSES: OrderStatus[] = ['shipped', 'completed'];
+
+const statusClasses: Record<OrderStatus, string> = {
   pending: 'bg-[#f3ebdd] text-[#7b5e2f]',
   paid: 'bg-[#eaf5eb] text-[#2a7b46]',
+  processing: 'bg-[#e8f0ff] text-[#2955b1]',
+  shipped: 'bg-[#f4e5ff] text-[#6c3dbb]',
+  completed: 'bg-[#eaf7ef] text-[#1d7d51]',
+  cancelled: 'bg-[#fbe9e7] text-[#9a3c2c]',
+  refunded: 'bg-[#f6efe8] text-[#7a614e]',
+};
+
+const scopeStatusLabel: Record<OrderStatus, string> = {
+  pending: 'Függőben',
+  paid: 'Fizetve',
+  processing: 'Feldolgozás alatt',
+  shipped: 'Kiszállítva',
+  completed: 'Teljesítve',
+  cancelled: 'Stornózva',
+  refunded: 'Visszatérítve',
 };
 
 const fmtMoney = (value?: number) => `${Number(value ?? 0).toLocaleString('hu-HU')} Ft`;
 
-const makeOrderStatus = (order: OrderRecord) => {
-  if (order.payment_status === 'paid' || order.status === 'paid') return 'Fizetve';
-  return 'Folyamatban';
+const getOrderStatusValue = (order: OrderRecord): OrderStatus => {
+  if (order.status && ORDER_STATUS_OPTIONS.includes(order.status)) {
+    return order.status;
+  }
+
+  if (order.payment_status === 'refunded') {
+    return 'refunded';
+  }
+
+  if (order.payment_status === 'paid' || order.status === 'paid') {
+    return 'paid';
+  }
+
+  return 'pending';
 };
 
-type StatusFilter = 'all' | 'pending' | 'paid';
+const derivePaymentStatus = (status: OrderStatus): PaymentStatus => {
+  if (status === 'refunded') return 'refunded';
+  if (['paid', 'processing', 'shipped', 'completed'].includes(status)) return 'paid';
+  return 'pending';
+};
+
+const getStatusFilterLabel = (filter: StatusFilter) => {
+  if (filter === 'all') return 'Összes';
+  if (filter === 'pending') return 'Függőben';
+  if (filter === 'paid') return 'Fizetve';
+  if (filter === 'processing') return 'Feldolgozás';
+  if (filter === 'shipped') return 'Kiszállítva';
+  if (filter === 'completed') return 'Teljesítve';
+  if (filter === 'cancelled') return 'Stornó';
+  return 'Visszatérítés';
+};
+
+const getStatusMeta = (status: OrderStatus) => ({
+  label: scopeStatusLabel[status],
+  className: statusClasses[status],
+});
 
 export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -61,6 +135,7 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -70,7 +145,16 @@ export default function AdminPage() {
         sort: '-created',
       });
 
-      setOrders(records as unknown as OrderRecord[]);
+      const normalized = (records as unknown as OrderRecord[]).map((order) => {
+        const status = getOrderStatusValue(order);
+        return {
+          ...order,
+          status,
+          payment_status: order.payment_status ?? derivePaymentStatus(status),
+        };
+      });
+
+      setOrders(normalized);
     } catch (error) {
       console.error('Admin megrendelések betöltése nem sikerült:', error);
       setOrders([]);
@@ -115,18 +199,29 @@ export default function AdminPage() {
     setOrders([]);
     setSearch('');
     setPassword('');
+    setEditingOrder(null);
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, nextStatus: 'pending' | 'paid') => {
+  const handleUpdateOrderStatus = async (orderId: string, nextStatus: OrderStatus) => {
+    const targetOrder = orders.find((order) => order.id === orderId);
+    if (!targetOrder) return;
+
     setUpdatingOrderId(orderId);
 
     try {
-      await pb.collection('orders').update(orderId, {
-        payment_status: nextStatus,
+      const nextPaymentStatus = derivePaymentStatus(nextStatus);
+      const updatedOrder = {
+        ...targetOrder,
         status: nextStatus,
+        payment_status: nextPaymentStatus,
+      };
+
+      await pb.collection('orders').update(orderId, {
+        status: nextStatus,
+        payment_status: nextPaymentStatus,
       });
 
-      await fetchOrders();
+      setOrders((current) => current.map((order) => (order.id === orderId ? updatedOrder : order)));
     } catch (error) {
       console.error('Rendelés állapot frissítése sikertelen:', error);
     } finally {
@@ -134,14 +229,79 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return;
+
+    const confirmed = window.confirm(`Biztosan törlöd a(z) #${order.id} rendelést?`);
+    if (!confirmed) return;
+
+    try {
+      await pb.collection('orders').delete(orderId);
+      setOrders((current) => current.filter((item) => item.id !== orderId));
+      if (editingOrder?.id === orderId) {
+        setEditingOrder(null);
+      }
+    } catch (error) {
+      console.error('Rendelés törlése sikertelen:', error);
+      window.alert('A rendelés törlése sikertelen volt.');
+    }
+  };
+
+  const handleSaveEdit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingOrder) return;
+
+    try {
+      const payload = {
+        customer_name: editingOrder.customer_name,
+        customer_email: editingOrder.customer_email,
+        customer_phone: editingOrder.customer_phone,
+        delivery_method: editingOrder.delivery_method,
+        payment_method: editingOrder.payment_method,
+        payment_status: editingOrder.payment_status,
+        status: editingOrder.status,
+        total_price: Number(editingOrder.total_price ?? 0),
+        foxpost_place_id: editingOrder.foxpost_place_id ?? '',
+        foxpost_place_name: editingOrder.foxpost_place_name ?? '',
+        foxpost_place_address: editingOrder.foxpost_place_address ?? '',
+        shipping_address: editingOrder.shipping_address ?? '',
+        invoice_required: Boolean(editingOrder.invoice_required),
+        invoice_company_name: editingOrder.invoice_company_name ?? '',
+        invoice_tax_number: editingOrder.invoice_tax_number ?? '',
+        invoice_address: editingOrder.invoice_address ?? '',
+        invoice_email: editingOrder.invoice_email ?? '',
+      };
+
+      const updated = await pb.collection('orders').update(editingOrder.id, payload);
+      const updatedOrder = updated as unknown as OrderRecord;
+      const normalized = {
+        ...updatedOrder,
+        status: getOrderStatusValue(updatedOrder),
+        payment_status: updatedOrder.payment_status ?? derivePaymentStatus(getOrderStatusValue(updatedOrder)),
+      };
+
+      setOrders((current) => current.map((order) => (order.id === editingOrder.id ? normalized : order)));
+      setEditingOrder(null);
+    } catch (error) {
+      console.error('Rendelés módosítása sikertelen:', error);
+      window.alert('A rendelés mentése sikertelen volt.');
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return orders.filter((order) => {
+      const effectiveStatus = getOrderStatusValue(order);
       const matchesStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'paid' && (order.payment_status === 'paid' || order.status === 'paid')) ||
-        (statusFilter === 'pending' && order.payment_status !== 'paid' && order.status !== 'paid');
+        (statusFilter === 'pending' && effectiveStatus === 'pending') ||
+        (statusFilter === 'paid' && effectiveStatus === 'paid') ||
+        (statusFilter === 'processing' && effectiveStatus === 'processing') ||
+        (statusFilter === 'completed' && effectiveStatus === 'completed') ||
+        (statusFilter === 'cancelled' && effectiveStatus === 'cancelled') ||
+        (statusFilter === 'refunded' && effectiveStatus === 'refunded');
 
       const haystack = [
         order.customer_name,
@@ -150,6 +310,7 @@ export default function AdminPage() {
         order.id,
         order.foxpost_place_name,
         order.shipping_address,
+        order.invoice_company_name,
       ]
         .filter(Boolean)
         .join(' ')
@@ -268,7 +429,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <section className="mb-8 grid gap-4 md:grid-cols-3">
+        <section className="mb-8 grid gap-4 md:grid-cols-4">
           <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
             <div className="flex items-center justify-between">
               <p className="text-sm text-[#6d655d]">Összes rendelés</p>
@@ -278,20 +439,29 @@ export default function AdminPage() {
           </div>
           <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Fizetve</p>
-              <ShieldCheck className="h-5 w-5 text-[#2a7b46]" />
+              <p className="text-sm text-[#6d655d]">Függőben</p>
+              <Clock3 className="h-5 w-5 text-[#7b5e2f]" />
             </div>
             <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
-              {orders.filter((order) => order.payment_status === 'paid' || order.status === 'paid').length}
+              {orders.filter((order) => getOrderStatusValue(order) === 'pending').length}
             </p>
           </div>
           <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Kiszállításra vár</p>
-              <Truck className="h-5 w-5 text-[#7b5e2f]" />
+              <p className="text-sm text-[#6d655d]">Feldolgozás</p>
+              <ShoppingCart className="h-5 w-5 text-[#2955b1]" />
             </div>
             <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
-              {orders.filter((order) => order.payment_status !== 'paid' && order.status !== 'paid').length}
+              {orders.filter((order) => getOrderStatusValue(order) === 'processing').length}
+            </p>
+          </div>
+          <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[#6d655d]">Kiszállítva / teljesítve</p>
+              <ShieldCheck className="h-5 w-5 text-[#1d7d51]" />
+            </div>
+            <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
+              {orders.filter((order) => SHIPPED_STATUSES.includes(getOrderStatusValue(order))).length}
             </p>
           </div>
         </section>
@@ -316,20 +486,20 @@ export default function AdminPage() {
               <MailCheck className="h-5 w-5 text-[#2a7b46]" />
             </div>
             <p className="mt-4 text-lg font-medium text-[#2d2922]">Resend + PocketBase aktiv</p>
-            <p className="mt-2 text-sm text-[#5d564f]">Vevői és admin e-mail értesítés automatikusan indul.</p>
+            <p className="mt-2 text-sm text-[#5d564f]">Vevői és admin értesítő üzenetek automatikusan indulnak.</p>
           </div>
 
           <div className="rounded-[24px] border border-[#e3ded3] bg-[#f9f5ef] p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Rendelés műveletek</p>
-              <CheckCheck className="h-5 w-5 text-[#473f36]" />
+              <p className="text-sm text-[#6d655d]">Státusz kezelő</p>
+              <CreditCard className="h-5 w-5 text-[#473f36]" />
             </div>
-            <p className="mt-4 text-lg font-medium text-[#2d2922]">Változtasd a rendelés státuszát közvetlenül</p>
+            <p className="mt-4 text-lg font-medium text-[#2d2922]">Visszavonás, törlés és minden szintű állapotváltás</p>
           </div>
         </section>
 
         <div className="mb-5 flex flex-wrap gap-2">
-          {(['all', 'pending', 'paid'] as StatusFilter[]).map((filter) => (
+          {ORDER_FILTER_OPTIONS.map((filter) => (
             <button
               key={filter}
               type="button"
@@ -340,7 +510,7 @@ export default function AdminPage() {
                   : 'border border-[#ddd0c0] bg-white text-[#2d2922] hover:border-[#a35e29]'
               }`}
             >
-              {filter === 'all' ? 'Összes' : filter === 'pending' ? 'Függőben' : 'Fizetve'}
+              {getStatusFilterLabel(filter)}
             </button>
           ))}
         </div>
@@ -356,83 +526,289 @@ export default function AdminPage() {
                   <th className="px-5 py-4 font-semibold">Fizetés</th>
                   <th className="px-5 py-4 font-semibold">Összeg</th>
                   <th className="px-5 py-4 font-semibold">Állapot</th>
+                  <th className="px-5 py-4 font-semibold">Műveletek</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-[#6b625b]">
+                    <td colSpan={7} className="px-5 py-12 text-center text-[#6b625b]">
                       Betöltés...
                     </td>
                   </tr>
                 ) : filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-[#6b625b]">
+                    <td colSpan={7} className="px-5 py-12 text-center text-[#6b625b]">
                       Nincs megjeleníthető rendelés.
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => (
-                    <tr key={order.id} className="border-t border-[#f0e9e1] align-top">
-                      <td className="px-5 py-4">
-                        <div className="font-semibold text-[#2d2922]">#{order.id}</div>
-                        <div className="mt-1 text-xs text-[#786f66]">
-                          {order.created ? new Date(order.created).toLocaleString('hu-HU') : 'Dátum nincs rögzítve'}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="font-medium text-[#2d2922]">{order.customer_name}</div>
-                        <div className="mt-1 text-[#5d564f]">{order.customer_email}</div>
-                        <div className="mt-1 text-[#5d564f]">{order.customer_phone}</div>
-                      </td>
-                      <td className="px-5 py-4 text-[#4c453d]">
-                        <div className="font-medium text-[#2d2922]">
-                          {order.delivery_method === 'foxpost' ? 'Foxpost automata' : 'Házhozszállítás'}
-                        </div>
-                        <div className="mt-1 max-w-[240px] text-xs leading-5 text-[#5d564f]">
-                          {order.delivery_method === 'foxpost'
-                            ? `${order.foxpost_place_name ?? 'Automata'} — ${order.foxpost_place_address ?? ''}`
-                            : order.shipping_address ?? 'Nincs cím megadva'}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-[#4c453d]">
-                        <div className="font-medium text-[#2d2922]">
-                          {order.payment_method === 'stripe' ? 'Online fizetés' : 'Banki átutalás'}
-                        </div>
-                        <div className="mt-1 text-xs text-[#5d564f]">
-                          {order.payment_status === 'paid' ? 'Kifizetve' : 'Függőben'}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 font-semibold text-[#2d2922]">{fmtMoney(order.total_price)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col gap-2">
-                          <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-semibold ${statusStyles[order.status ?? 'pending']}`}>
-                            {order.status === 'paid' ? <Check className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
-                            {makeOrderStatus(order)}
-                          </span>
+                  filteredOrders.map((order) => {
+                    const currentStatus = getOrderStatusValue(order);
+                    const statusMeta = getStatusMeta(currentStatus);
 
-                          <button
-                            type="button"
-                            disabled={updatingOrderId === order.id}
-                            onClick={() => handleUpdateOrderStatus(order.id, order.status === 'paid' ? 'pending' : 'paid')}
-                            className="rounded-full border border-[#d8cab1] bg-[#f8f4ee] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] transition hover:border-[#a35e29] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {updatingOrderId === order.id
-                              ? 'Frissítés...'
-                              : order.status === 'paid'
-                                ? 'Visszaállítás függőbenre'
-                                : 'Megjelölés fizetve'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                    return (
+                      <tr key={order.id} className="border-t border-[#f0e9e1] align-top">
+                        <td className="px-5 py-4">
+                          <div className="font-semibold text-[#2d2922]">#{order.id}</div>
+                          <div className="mt-1 text-xs text-[#786f66]">
+                            {order.created ? new Date(order.created).toLocaleString('hu-HU') : 'Dátum nincs rögzítve'}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="font-medium text-[#2d2922]">{order.customer_name}</div>
+                          <div className="mt-1 text-[#5d564f]">{order.customer_email}</div>
+                          <div className="mt-1 text-[#5d564f]">{order.customer_phone}</div>
+                        </td>
+                        <td className="px-5 py-4 text-[#4c453d]">
+                          <div className="font-medium text-[#2d2922]">
+                            {order.delivery_method === 'foxpost' ? 'Foxpost automata' : 'Házhozszállítás'}
+                          </div>
+                          <div className="mt-1 max-w-[220px] text-xs leading-5 text-[#5d564f]">
+                            {order.delivery_method === 'foxpost'
+                              ? `${order.foxpost_place_name ?? 'Automata'} — ${order.foxpost_place_address ?? ''}`
+                              : order.shipping_address ?? 'Nincs cím megadva'}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-[#4c453d]">
+                          <div className="font-medium text-[#2d2922]">
+                            {order.payment_method === 'stripe' ? 'Online fizetés' : 'Banki átutalás'}
+                          </div>
+                          <div className="mt-1 text-xs text-[#5d564f]">
+                            {order.payment_status === 'paid'
+                              ? 'Kifizetve'
+                              : order.payment_status === 'refunded'
+                                ? 'Visszatérítve'
+                                : 'Függőben'}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-semibold text-[#2d2922]">{fmtMoney(order.total_price)}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-2">
+                            <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-semibold ${statusMeta.className}`}>
+                              {currentStatus === 'pending' ? <Clock3 className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                              {statusMeta.label}
+                            </span>
+                            <select
+                              value={currentStatus}
+                              onChange={(event) => handleUpdateOrderStatus(order.id, event.target.value as OrderStatus)}
+                              disabled={updatingOrderId === order.id}
+                              className="rounded-full border border-[#ddd0c0] bg-[#faf8f5] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] outline-none"
+                            >
+                              {ORDER_STATUS_OPTIONS.map((status) => (
+                                <option key={status} value={status}>
+                                  {scopeStatusLabel[status]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingOrder(order)}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#d9d0c2] bg-[#f8f3ec] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                              Szerkesztés
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#e7c4bc] bg-[#fff4f2] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b3d30] hover:border-[#af5646]"
+                            >
+                              <Delete className="h-3.5 w-3.5" />
+                              Törlés
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
         </section>
       </main>
+
+      {editingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#221d1b]/55 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(26,20,16,0.18)]">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#8e7d68]">Rendelés szerkesztése</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">#{editingOrder.id}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingOrder(null)}
+                className="rounded-full border border-[#ddd0c0] p-2 text-[#2d2922] hover:border-[#a35e29]"
+                aria-label="Bezárás"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Név</span>
+                  <input
+                    value={editingOrder.customer_name}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, customer_name: event.target.value })}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">E-mail</span>
+                  <input
+                    type="email"
+                    value={editingOrder.customer_email}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, customer_email: event.target.value })}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Telefon</span>
+                  <input
+                    value={editingOrder.customer_phone}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, customer_phone: event.target.value })}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Összeg</span>
+                  <input
+                    type="number"
+                    value={editingOrder.total_price ?? 0}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, total_price: Number(event.target.value) })}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Szállítási mód</span>
+                  <select
+                    value={editingOrder.delivery_method}
+                    onChange={(event) =>
+                      setEditingOrder({ ...editingOrder, delivery_method: event.target.value as 'foxpost' | 'home_delivery' })
+                    }
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  >
+                    <option value="foxpost">Foxpost automata</option>
+                    <option value="home_delivery">Házhozszállítás</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Fizetési mód</span>
+                  <select
+                    value={editingOrder.payment_method}
+                    onChange={(event) =>
+                      setEditingOrder({ ...editingOrder, payment_method: event.target.value as 'bank_transfer' | 'stripe' })
+                    }
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  >
+                    <option value="bank_transfer">Banki átutalás</option>
+                    <option value="stripe">Online fizetés</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Állapot</span>
+                  <select
+                    value={editingOrder.status}
+                    onChange={(event) => {
+                      const nextStatus = event.target.value as OrderStatus;
+                      setEditingOrder({
+                        ...editingOrder,
+                        status: nextStatus,
+                        payment_status: derivePaymentStatus(nextStatus),
+                      });
+                    }}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  >
+                    {ORDER_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {scopeStatusLabel[status]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Fizetési állapot</span>
+                  <select
+                    value={editingOrder.payment_status}
+                    onChange={(event) =>
+                      setEditingOrder({
+                        ...editingOrder,
+                        payment_status: event.target.value as PaymentStatus,
+                      })
+                    }
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  >
+                    <option value="pending">Függőben</option>
+                    <option value="paid">Kifizetve</option>
+                    <option value="refunded">Visszatérítve</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block md:col-span-2">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Szállítási cím</span>
+                  <textarea
+                    value={editingOrder.shipping_address ?? ''}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, shipping_address: event.target.value })}
+                    className="min-h-[100px] w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Foxpost automata neve</span>
+                  <input
+                    value={editingOrder.foxpost_place_name ?? ''}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, foxpost_place_name: event.target.value })}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Foxpost címe</span>
+                  <input
+                    value={editingOrder.foxpost_place_address ?? ''}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, foxpost_place_address: event.target.value })}
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingOrder(null)}
+                  className="rounded-full border border-[#ddd0c0] bg-white px-5 py-2.5 text-sm font-semibold text-[#2d2922] transition hover:border-[#a35e29]"
+                >
+                  Mégse
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2d2922] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e1b18]"
+                >
+                  <Banknote className="h-4 w-4" />
+                  Mentés
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -20,7 +20,7 @@ import {
 import Header from '@/components/Header';
 import FoxpostPicker, { type FoxpostSelection } from '@/components/FoxpostPicker';
 import { useCart } from '@/context/CartContext';
-import { getImageUrl, pb } from '@/lib/pocketbase';
+import { getImageUrl } from '@/lib/pocketbase';
 import type { PaymentMethod } from '@/types';
 
 const resolveProductImage = (product: { image?: string | null } | null, fallback = '/placeholder.png') => {
@@ -182,7 +182,21 @@ export default function CheckoutPage() {
             }),
       };
 
-      const createdOrder = await pb.collection('orders').create(payload as Record<string, unknown>);
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseBody = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseBody?.error || 'A rendelés mentése sikertelen volt.');
+      }
+
+      const createdOrder = responseBody.order;
 
       clearCart();
       router.push(

@@ -255,7 +255,6 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<ProductRecord | null>(
     null,
   );
-  const [imageZoom, setImageZoom] = useState(1.5);
 
   const { addToCart } = useCart();
 
@@ -307,12 +306,10 @@ export default function HomePage() {
 
   const openProductModal = (product: ProductRecord) => {
     setSelectedProduct(product);
-    setImageZoom(1.5);
   };
 
   const closeProductModal = () => {
     setSelectedProduct(null);
-    setImageZoom(1.5);
   };
 
   return (
@@ -572,51 +569,10 @@ export default function HomePage() {
                         }
                         alt={selectedProduct.title}
                         className="h-full w-full object-contain transition-transform duration-200 ease-out"
-                        style={{
-                          transform: `scale(${imageZoom})`,
-                        }}
                       />
                     </div>
                   </div>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setImageZoom((zoom) =>
-                          Math.max(1, Number((zoom - 0.25).toFixed(2))),
-                        )
-                      }
-                      className="rounded-full border border-[#d3cabd] bg-white px-3 py-1.5 text-sm font-medium text-[#2d2923] transition hover:border-[#2d2923]"
-                    >
-                      -
-                    </button>
-
-                    <input
-                      type="range"
-                      min="1"
-                      max="4"
-                      step="0.1"
-                      value={imageZoom}
-                      onChange={(event) =>
-                        setImageZoom(Number(event.target.value))
-                      }
-                      className="h-2 w-32 accent-[#2d2923]"
-                      aria-label="Kép nagyítása"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setImageZoom((zoom) =>
-                          Math.min(4, Number((zoom + 0.25).toFixed(2))),
-                        )
-                      }
-                      className="rounded-full border border-[#d3cabd] bg-white px-3 py-1.5 text-sm font-medium text-[#2d2923] transition hover:border-[#2d2923]"
-                    >
-                      +
-                    </button>
-                  </div>
                 </div>
 
                 <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
@@ -1102,7 +1058,7 @@ export default function HomePage() {
                 <img
                   src={logoUrl}
                   alt="Zsül Portékái logó"
-                  className="h-14 w-auto max-w-[220px] object-contain brightness-0 invert"
+                  className="h-14 w-auto max-w-[220px] object-contain"
                 />
               </div>
 
@@ -1115,47 +1071,28 @@ export default function HomePage() {
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
-                Kapcsolat
+                Elérhetőségeink:
               </p>
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
-                <p>Hajdúböszörmény, Magyarország</p>
-                <p>info@zsulportekai.hu</p>
-                <p>+36 20 123 4567</p>
+                <p>Cím: 4220 Hajdúböszörmény, Kisböszörmény utca 3.</p>
+                <p>Telefon: 06 70 368 2132</p>
+                <p>E-mail: zsulportekai@gmail.com</p>
               </div>
             </div>
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
-                Információ
+                INFORMÁCIÓK:
               </p>
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
-                <a
-                  href="#products"
-                  className="block transition hover:text-white"
-                >
-                  Termékek
-                </a>
-
-                <a href="#about" className="block transition hover:text-white">
-                  Rólunk
-                </a>
-
-                <a
-                  href="#reviews"
-                  className="block transition hover:text-white"
-                >
-                  Vélemények
-                </a>
-
-                <a href="#" className="block transition hover:text-white">
-                  Általános szerződési feltételek
-                </a>
-
-                <a href="#" className="block transition hover:text-white">
-                  Adatkezelési tájékoztató
-                </a>
+                <p>Szállítási és átvételi módok</p>
+                <p>Másolat fizetési módok</p>
+                <p>Fizetési és teljesítési pénzügyi tájékoztató</p>
+                <p>Általános szerződési feltételek</p>
+                <p>Adatvédelmi szabályzat / adatkezelési tájékoztató</p>
+                <p>Facebook</p>
               </div>
             </div>
           </div>

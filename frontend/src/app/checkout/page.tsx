@@ -194,7 +194,11 @@ export default function CheckoutPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          payment_status: 'pending',
+          status: 'pending',
+        }),
       });
 
       const responseBody = await response.json();
@@ -204,6 +208,31 @@ export default function CheckoutPage() {
       }
 
       const createdOrder = responseBody.order;
+
+      if (paymentMethod === 'stripe') {
+        const stripeResponse = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId: createdOrder.id,
+            amount: orderTotal,
+            customerEmail: formData.email.trim(),
+            customerName: customerName,
+          }),
+        });
+
+        const stripePayload = await stripeResponse.json();
+
+        if (!stripeResponse.ok) {
+          throw new Error(stripePayload?.error || 'A Stripe fizetési session létrehozása sikertelen volt.');
+        }
+
+        clearCart();
+        window.location.href = stripePayload.url;
+        return;
+      }
 
       clearCart();
       router.push(

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, Home, Landmark } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
@@ -9,6 +9,51 @@ function OrderSuccessContent() {
   const orderId = searchParams.get('id') ?? 'ismeretlen';
   const paymentMethod = searchParams.get('payment') ?? 'bank_transfer';
   const paymentStatus = searchParams.get('status') ?? 'pending';
+  const sessionId = searchParams.get('session_id');
+  const [isVerifyingStripe, setIsVerifyingStripe] = useState(false);
+  const [hasStripeVerificationError, setHasStripeVerificationError] = useState(false);
+
+  useEffect(() => {
+    if (paymentMethod !== 'stripe' || !sessionId || !orderId || paymentStatus === 'paid') {
+      return;
+    }
+
+    let isMounted = true;
+
+    const verifyStripePayment = async () => {
+      try {
+        setIsVerifyingStripe(true);
+        setHasStripeVerificationError(false);
+
+        const response = await fetch(`/api/stripe/verify?order_id=${encodeURIComponent(orderId)}&session_id=${encodeURIComponent(sessionId)}`);
+        const payload = await response.json();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!response.ok || !payload?.paid) {
+          setHasStripeVerificationError(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Stripe verification failed:', error);
+        if (isMounted) {
+          setHasStripeVerificationError(true);
+        }
+      } finally {
+        if (isMounted) {
+          setIsVerifyingStripe(false);
+        }
+      }
+    };
+
+    verifyStripePayment();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [orderId, paymentMethod, paymentStatus, sessionId]);
 
   const isPaid = paymentStatus === 'paid' || paymentMethod === 'stripe';
 
@@ -27,11 +72,25 @@ function OrderSuccessContent() {
           {isPaid ? 'Köszönjük a megrendelést!' : 'Rendelésedet fogadtuk!'}
         </h1>
 
-        <p className="mt-5 max-w-lg text-base leading-7 text-[#675f57]">
-          {isPaid
-            ? 'Az online fizetés sikeresen lezárult. A rendelésedet rögzítettük és feldolgozásra került.'
-            : 'A rendelésedet rögzítettük. A banki átutalási részleteket elküldjük a megadott e-mail címre, és a rendelés feldolgozása a befizetés ellenőrzését követően kezdődik meg.'}
-        </p>
+        {paymentMethod === 'stripe' && isVerifyingStripe && (
+          <p className="mt-5 max-w-lg text-base leading-7 text-[#675f57]">
+            A Stripe fizetés ellenőrzése folyamatban van. Egy pillanat múlva a rendelés automatikusan frissül.
+          </p>
+        )}
+
+        {paymentMethod === 'stripe' && hasStripeVerificationError && (
+          <p className="mt-5 max-w-lg text-base leading-7 text-[#8e4a2d]">
+            A Stripe fizetési ellenőrzés sikertelen volt, de a rendelés adatai megmaradtak. Kérjük, vedd fel velünk a kapcsolatot.
+          </p>
+        )}
+
+        {!isVerifyingStripe && !hasStripeVerificationError && (
+          <p className="mt-5 max-w-lg text-base leading-7 text-[#675f57]">
+            {isPaid
+              ? 'Az online fizetés sikeresen lezárult. A rendelésedet rögzítettük és feldolgozásra került.'
+              : 'A rendelésedet rögzítettük. A banki átutalási részleteket elküldjük a megadott e-mail címre, és a rendelés feldolgozása a befizetés ellenőrzését követően kezdődik meg.'}
+          </p>
+        )}
 
         <div className="mt-8 rounded-[22px] border border-[#e8e0d4] bg-[#faf8f5] p-4 sm:p-5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7e756a]">

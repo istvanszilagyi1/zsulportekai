@@ -24,7 +24,7 @@ import { pb } from '@/lib/pocketbase';
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
-type OrderStatus = 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled' | 'refunded';
+type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'cancelled' | 'refunded';
 type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
 type OrderRecord = {
@@ -54,21 +54,18 @@ const ORDER_STATUS_OPTIONS: OrderStatus[] = [
   'pending',
   'paid',
   'processing',
-  'shipped',
   'completed',
   'cancelled',
   'refunded',
 ];
 
-const ORDER_FILTER_OPTIONS = ['all', 'pending', 'paid', 'processing', 'shipped', 'completed', 'cancelled', 'refunded'] as const;
+const ORDER_FILTER_OPTIONS = ['all', 'pending', 'paid', 'processing', 'completed', 'cancelled', 'refunded'] as const;
 type StatusFilter = (typeof ORDER_FILTER_OPTIONS)[number];
-const SHIPPED_STATUSES: OrderStatus[] = ['shipped', 'completed'];
 
 const statusClasses: Record<OrderStatus, string> = {
   pending: 'bg-[#f3ebdd] text-[#7b5e2f]',
   paid: 'bg-[#eaf5eb] text-[#2a7b46]',
   processing: 'bg-[#e8f0ff] text-[#2955b1]',
-  shipped: 'bg-[#f4e5ff] text-[#6c3dbb]',
   completed: 'bg-[#eaf7ef] text-[#1d7d51]',
   cancelled: 'bg-[#fbe9e7] text-[#9a3c2c]',
   refunded: 'bg-[#f6efe8] text-[#7a614e]',
@@ -78,7 +75,6 @@ const scopeStatusLabel: Record<OrderStatus, string> = {
   pending: 'Függőben',
   paid: 'Fizetve',
   processing: 'Feldolgozás alatt',
-  shipped: 'Kiszállítva',
   completed: 'Teljesítve',
   cancelled: 'Stornózva',
   refunded: 'Visszatérítve',
@@ -104,7 +100,7 @@ const getOrderStatusValue = (order: OrderRecord): OrderStatus => {
 
 const derivePaymentStatus = (status: OrderStatus): PaymentStatus => {
   if (status === 'refunded') return 'refunded';
-  if (['paid', 'processing', 'shipped', 'completed'].includes(status)) return 'paid';
+  if (['paid', 'processing', 'completed'].includes(status)) return 'paid';
   return 'pending';
 };
 
@@ -113,7 +109,6 @@ const getStatusFilterLabel = (filter: StatusFilter) => {
   if (filter === 'pending') return 'Függőben';
   if (filter === 'paid') return 'Fizetve';
   if (filter === 'processing') return 'Feldolgozás';
-  if (filter === 'shipped') return 'Kiszállítva';
   if (filter === 'completed') return 'Teljesítve';
   if (filter === 'cancelled') return 'Stornó';
   return 'Visszatérítés';
@@ -457,11 +452,11 @@ export default function AdminPage() {
           </div>
           <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-[#6d655d]">Kiszállítva / teljesítve</p>
-              <ShieldCheck className="h-5 w-5 text-[#1d7d51]" />
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
-              {orders.filter((order) => SHIPPED_STATUSES.includes(getOrderStatusValue(order))).length}
+            <p className="text-sm text-[#6d655d]">Teljesítve</p>
+            <ShieldCheck className="h-5 w-5 text-[#1d7d51]" />
+          </div>
+          <p className="mt-4 text-3xl font-semibold tracking-[-0.06em]">
+              {orders.filter((order) => getOrderStatusValue(order) === 'completed').length}
             </p>
           </div>
         </section>
@@ -494,7 +489,7 @@ export default function AdminPage() {
               <p className="text-sm text-[#6d655d]">Státusz kezelő</p>
               <CreditCard className="h-5 w-5 text-[#473f36]" />
             </div>
-            <p className="mt-4 text-lg font-medium text-[#2d2922]">Visszavonás, törlés és minden szintű állapotváltás</p>
+<p className="mt-4 text-lg font-medium text-[#2d2922]">Visszavonás, törlés és számlakezelés közvetlenül az adminból</p>
           </div>
         </section>
 
@@ -621,6 +616,9 @@ export default function AdminPage() {
                               <Delete className="h-3.5 w-3.5" />
                               Törlés
                             </button>
+                          </div>
+                          <div className="mt-2 text-[11px] text-[#5d564f]">
+                            {order.invoice_required ? `Számla: ${order.invoice_company_name || 'cég'}` : 'Nincs számla'}
                           </div>
                         </td>
                       </tr>
@@ -787,6 +785,62 @@ export default function AdminPage() {
                     className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
                   />
                 </label>
+              </div>
+
+              <div className="rounded-[24px] border border-[#e8dfd0] bg-[#faf7f2] p-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <input
+                    id="invoice-required"
+                    type="checkbox"
+                    checked={Boolean(editingOrder.invoice_required)}
+                    onChange={(event) => setEditingOrder({ ...editingOrder, invoice_required: event.target.checked })}
+                    className="h-4 w-4 rounded border-[#cbbda5] text-[#2d2922] focus:ring-[#2d2922]"
+                  />
+                  <label htmlFor="invoice-required" className="text-sm font-medium text-[#2d2922]">
+                    Számla szükséges
+                  </label>
+                </div>
+
+                {editingOrder.invoice_required && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-[#4c453d]">Cégnév</span>
+                      <input
+                        value={editingOrder.invoice_company_name ?? ''}
+                        onChange={(event) => setEditingOrder({ ...editingOrder, invoice_company_name: event.target.value })}
+                        className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-[#4c453d]">Adószám</span>
+                      <input
+                        value={editingOrder.invoice_tax_number ?? ''}
+                        onChange={(event) => setEditingOrder({ ...editingOrder, invoice_tax_number: event.target.value })}
+                        className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                      />
+                    </label>
+
+                    <label className="block md:col-span-2">
+                      <span className="mb-2 block text-sm font-medium text-[#4c453d]">Számlázási cím</span>
+                      <textarea
+                        value={editingOrder.invoice_address ?? ''}
+                        onChange={(event) => setEditingOrder({ ...editingOrder, invoice_address: event.target.value })}
+                        className="min-h-[100px] w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                      />
+                    </label>
+
+                    <label className="block md:col-span-2">
+                      <span className="mb-2 block text-sm font-medium text-[#4c453d]">Számla e-mail</span>
+                      <input
+                        type="email"
+                        value={editingOrder.invoice_email ?? ''}
+                        onChange={(event) => setEditingOrder({ ...editingOrder, invoice_email: event.target.value })}
+                        className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

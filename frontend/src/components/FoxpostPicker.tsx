@@ -14,54 +14,6 @@ type FoxpostPickerProps = {
   onSelect: (selection: FoxpostSelection) => void;
 };
 
-const isFoxpostOrigin = (origin: string) => {
-  try {
-    return new URL(origin).hostname.toLowerCase().endsWith('foxpost.hu');
-  } catch {
-    return /foxpost\.hu$/i.test(origin) || /foxpost\.hu\b/i.test(origin);
-  }
-};
-
-const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-const extractFoxpostValue = (source: unknown, keys: string[]) => {
-  if (!source || typeof source !== 'object') {
-    return undefined;
-  }
-
-  const normalizedKeys = new Set(keys.map((key) => normalizeKey(key)));
-  const queue: unknown[] = [source];
-  const visited = new Set<unknown>();
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current || typeof current !== 'object' || visited.has(current)) {
-      continue;
-    }
-
-    visited.add(current);
-
-    if (Array.isArray(current)) {
-      queue.push(...current);
-      continue;
-    }
-
-    for (const [key, value] of Object.entries(current as Record<string, unknown>)) {
-      if (normalizedKeys.has(normalizeKey(key))) {
-        if (value !== undefined && value !== null && value !== '') {
-          return value;
-        }
-      }
-
-      if (value && typeof value === 'object') {
-        queue.push(value);
-      }
-    }
-  }
-
-  return undefined;
-};
-
 export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
   const [selected, setSelected] = useState<FoxpostSelection | null>(value ?? null);
   const [showPicker, setShowPicker] = useState(!value);
@@ -73,68 +25,40 @@ export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const data = event.data;
-      if (!data || typeof data !== 'object') {
-        return;
+      // Biztonsági ellenőrzés: csak a Foxpost hivatalos oldaláról fogadjuk az adatot
+      if (event.origin !== 'https://cdn.foxpost.hu') return;
+
+      let data = event.data;
+
+      // A Foxpost widget JSON stringként küldi az adatot, ezt dekódolni kell!
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return; // Ha nem érvényes JSON, figyelmen kívül hagyjuk
+        }
       }
 
-      const origin = event.origin ?? '';
-      if (!isFoxpostOrigin(origin)) {
-        return;
+      if (!data || typeof data !== 'object') return;
+
+      // A Foxpost szabványos válaszmezői
+      const id = data.operator_id || data.place_id || data.id;
+      const name = data.name || data.title;
+      // Az address vagy egyben jön, vagy részekből kell összerakni
+      const address = data.address || data.full_address || [data.zip, data.city, data.street].filter(Boolean).join(', ');
+
+      // Ha megvan minden adat, elmentjük a kiválasztást
+      if (id && name && address) {
+        const nextSelection: FoxpostSelection = {
+          id: String(id).trim(),
+          name: String(name).trim(),
+          address: String(address).trim(),
+        };
+
+        setSelected(nextSelection);
+        setShowPicker(false);
+        onSelect(nextSelection);
       }
-
-      const payload =
-        (data as Record<string, unknown>).payload ??
-        (data as Record<string, unknown>).selected ??
-        (data as Record<string, unknown>).selection ??
-        (data as Record<string, unknown>).place ??
-        (data as Record<string, unknown>).selectedPlace ??
-        (data as Record<string, unknown>).location ??
-        data;
-
-      const rawPlaceId =
-        extractFoxpostValue(payload, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id', 'point_id', 'terminal_id']) ??
-        extractFoxpostValue((data as Record<string, unknown>).place, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id', 'point_id', 'terminal_id']);
-
-      const rawName =
-        extractFoxpostValue(payload, ['name', 'place_name', 'point_name', 'location_name', 'title']) ??
-        extractFoxpostValue((data as Record<string, unknown>).place, ['name', 'place_name', 'point_name', 'location_name', 'title']);
-
-      const rawAddress =
-        extractFoxpostValue(payload, [
-          'address',
-          'full_address',
-          'addressText',
-          'fullAddress',
-          'address_text',
-          'pickup_address',
-        ]) ??
-        extractFoxpostValue((data as Record<string, unknown>).place, [
-          'address',
-          'full_address',
-          'addressText',
-          'fullAddress',
-          'address_text',
-          'pickup_address',
-        ]);
-
-      if (rawPlaceId === undefined || rawName === undefined || rawAddress === undefined) {
-        return;
-      }
-
-      const nextSelection: FoxpostSelection = {
-        id: String(rawPlaceId).trim(),
-        name: String(rawName).trim(),
-        address: String(rawAddress).trim(),
-      };
-
-      if (!nextSelection.id || !nextSelection.name || !nextSelection.address) {
-        return;
-      }
-
-      setSelected(nextSelection);
-      setShowPicker(false);
-      onSelect(nextSelection);
     };
 
     window.addEventListener('message', handleMessage);
@@ -146,45 +70,35 @@ export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
 
   return (
     <div className="space-y-4">
-      {!selected && (
-        <div className="rounded-[22px] border border-dashed border-[#d0c6b7] bg-[#faf8f5] p-4 text-sm text-[#5b544d]">
-          <p className="font-medium text-[#2d2922]">Válassza ki az átvételi pontot</p>
-          <p className="mt-1 leading-6">
-            A Foxpost automata kiválasztása után a rendeléshez a pontos cím és a csomagautomatás hely megadása automatikusan rögzítésre kerül.
+      {/* Tájékoztató szöveg, ha még nincs kiválasztva semmi */}
+      {!selected && !showPicker && (
+        <div className="rounded-[20px] border border-dashed border-[#d9d3c8] bg-[#FAF9F5] p-5 text-sm text-[#777166]">
+          <p className="font-semibold text-[#2c2923]">Kérjük, válasszon egy átvételi pontot!</p>
+          <p className="mt-1.5 leading-6">
+            A Foxpost automata kiválasztása után a rendeléshez a pontos cím automatikusan rögzítésre kerül.
           </p>
         </div>
       )}
 
-      {showPicker && (
-        <div className="overflow-hidden rounded-[22px] border border-[#d9d3c8] bg-white shadow-[0_10px_24px_rgba(39,33,26,0.06)]">
-          <iframe
-            src="https://cdn.foxpost.hu/apt-finder/v1/app/"
-            title="Foxpost automata kiválasztó"
-            className="h-[520px] w-full border-0 bg-white sm:h-[620px]"
-            loading="lazy"
-            allow="clipboard-write"
-          />
-        </div>
-      )}
-
-      {selected && (
-        <div className="flex flex-col gap-4 rounded-[22px] border border-[#a7d4ad] bg-[#eef9f1] p-4 text-[#1e3a2a] shadow-[0_8px_18px_rgba(45,104,66,0.08)] sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#d9f1df] text-[#1f7a45]">
-              <Check className="h-4 w-4" strokeWidth={2.5} />
+      {/* A kiválasztott automata megjelenítése (Elegáns Zsül Portékái stílusban) */}
+      {selected && !showPicker && (
+        <div className="flex flex-col gap-4 rounded-[20px] border border-[#d9d3c8] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between transition-all">
+          <div className="flex items-start gap-4">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0e9dc] text-[#506b4d]">
+              <Check className="h-5 w-5" strokeWidth={2.5} />
             </div>
 
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#3c7a55]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8a806d]">
                 Kiválasztott átvételi pont
               </p>
 
-              <p className="mt-2 flex items-center gap-2 text-base font-semibold text-[#183b2b]">
-                <MapPin className="h-4 w-4" strokeWidth={2} />
+              <p className="mt-2 flex items-center gap-2 text-base font-bold text-[#2c2923]">
+                <MapPin className="h-4 w-4 shrink-0 text-[#a35e29]" strokeWidth={2} />
                 {selected.name}
               </p>
 
-              <p className="mt-1 text-sm leading-5 text-[#29543b]">
+              <p className="mt-1 pl-6 text-sm leading-5 text-[#777166]">
                 {selected.address}
               </p>
             </div>
@@ -193,11 +107,29 @@ export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
           <button
             type="button"
             onClick={() => setShowPicker(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#8ec49d] bg-white px-4 py-2 text-sm font-medium text-[#214f37] transition hover:bg-[#f5fbf6]"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#d9d3c8] bg-[#FAF9F5] px-5 py-2.5 text-sm font-semibold text-[#2c2923] transition hover:bg-[#f0e9dc]"
           >
             <PencilLine className="h-4 w-4" strokeWidth={2} />
             Módosítás
           </button>
+        </div>
+      )}
+
+      {/* A Foxpost Térkép (Iframe) */}
+      {showPicker && (
+        <div className="overflow-hidden rounded-[20px] border border-[#d9d3c8] bg-white shadow-sm animate-in fade-in zoom-in-95 duration-300">
+          <div className="border-b border-[#d9d3c8] bg-[#FAF9F5] px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#5e574c]">
+              Foxpost Automata Kereső
+            </p>
+          </div>
+          <iframe
+            src="https://cdn.foxpost.hu/apt-finder/v1/app/"
+            title="Foxpost automata kiválasztó"
+            className="h-[550px] w-full border-0 bg-white sm:h-[650px]"
+            loading="lazy"
+            allow="clipboard-write"
+          />
         </div>
       )}
     </div>

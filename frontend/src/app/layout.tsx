@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Zsül Portékái",
   description: "Egyedi kézműves termékek",
   icons: {
-    icon: [{ url: logoUrl, rel: "icon" }],
+    icon: "/favicon.ico",
   },
 };
 

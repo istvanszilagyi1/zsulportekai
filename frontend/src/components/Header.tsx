@@ -59,40 +59,33 @@ export default function Header() {
       <header
         className={`sticky top-0 z-50 transition-all duration-500 ease-in-out ${
           isScrolled
-            ? 'h-16 border-b border-[#e6dfd3] bg-[#fbf9f5]/95 shadow-[0_4px_20px_rgba(43,37,28,0.05)] backdrop-blur-md'
-            : 'h-20 border-b border-transparent bg-[#FAF9F5]'
+            ? 'h-14 border-b border-[#e6dfd3] bg-[#fbf9f5]/95 shadow-[0_4px_20px_rgba(43,37,28,0.05)] backdrop-blur-md'
+            : 'h-16 border-b border-transparent bg-[#FAF9F5]'
         }`}
       >
         <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-6 sm:px-10 lg:px-12">
-          
-          {/* Logó konténer - garantáltan a fejlécen belül marad */}
           <a
             href="/"
             aria-label="Zsül Portékái kezdőlap"
-            className="group relative flex h-full items-center gap-3 py-2 transition-transform duration-300"
+            className="group relative flex h-full items-center gap-2 py-2 transition-transform duration-300"
           >
             <div
               className={`relative flex items-center justify-center transition-all duration-300 ease-out ${
-                isScrolled ? 'h-10 w-10 sm:w-11' : 'h-12 w-12 sm:w-14'
+                isScrolled ? 'h-8 w-8 sm:w-9' : 'h-9 w-9 sm:w-10'
               }`}
             >
               <Image
                 src={logoUrl}
-                alt="Zsül Portékái Kistermelői Manufaktúra"
+                alt="Zsül Portékái"
                 fill
-                sizes="(max-width: 640px) 48px, 56px"
+                sizes="(max-width: 640px) 36px, 40px"
                 priority
                 className="object-contain object-left mix-blend-multiply transition-all duration-300 group-hover:scale-105 group-hover:brightness-95"
               />
             </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8e806e]">
-                Kistermelői manufaktúra
-              </span>
-              <span className="mt-1 text-base font-semibold tracking-[-0.04em] text-[#2d2922] sm:text-lg">
-                Zsül Portékái
-              </span>
-            </div>
+            <span className="text-base font-semibold tracking-[-0.04em] text-[#2d2922] sm:text-lg">
+              Zsül Portékái
+            </span>
           </a>
 
           {/* Navigáció */}

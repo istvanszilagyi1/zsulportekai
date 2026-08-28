@@ -1087,12 +1087,29 @@ export default function HomePage() {
               </p>
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
-                <p>Szállítási és átvételi módok</p>
-                <p>Másolat fizetési módok</p>
-                <p>Fizetési és teljesítési pénzügyi tájékoztató</p>
-                <p>Általános szerződési feltételek</p>
-                <p>Adatvédelmi szabályzat / adatkezelési tájékoztató</p>
-                <p>Facebook</p>
+                <a href="/szallitasi-es-atveteli-modok" className="block transition hover:text-white">
+                  Szállítási és átvételi módok
+                </a>
+                <a href="/fizetesi-modok" className="block transition hover:text-white">
+                  Fizetési módok
+                </a>
+                <a href="/fizetesi-es-teljesitesi-penzugyi-tajekoztato" className="block transition hover:text-white">
+                  Fizetési és teljesítési pénzügyi tájékoztató
+                </a>
+                <a href="/altalanos-szerzodesi-feltetelek-zsul-portekai-kistermeloi-webaruhaz" className="block transition hover:text-white">
+                  Általános szerződési feltételek
+                </a>
+                <a href="/adatvedelmi-szabalyzat-adatkezelesi-tajekoztato" className="block transition hover:text-white">
+                  Adatvédelmi szabályzat / adatkezelési tájékoztató
+                </a>
+                <a
+                  href="https://www.facebook.com/profile.php?id=61552720706499"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block transition hover:text-white"
+                >
+                  Facebook
+                </a>
               </div>
             </div>
           </div>

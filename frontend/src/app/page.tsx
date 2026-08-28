@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowDown,
   ArrowRight,
   Check,
   Heart,
   Leaf,
   Plus,
-  ShieldCheck,
   Sparkles,
   Star,
   Truck,
@@ -18,6 +18,7 @@ import { pb, getImageUrl } from '@/lib/pocketbase';
 import type { Product } from '@/types';
 
 type CategoryFilter = 'all' | 'olajok' | 'szorpok' | 'lisztek';
+
 type ProductRecord = Product & {
   category?: string;
   image?: string;
@@ -28,55 +29,38 @@ const logoUrl =
 
 const heroImage =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000192-fa333fa336/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20hidegen%20sajtolt%20olaj.webp?ph=4e95f92e87';
+
 const sunflowerImage =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000201-4458344586/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20napraforg%C3%B3.webp?ph=4e95f92e87';
+
 const syrupImage =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000203-7bf1c7bf1e/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20sz%C3%B6rp.webp?ph=4e95f92e87';
+
 const flourImage =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000202-6029560298/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20liszt.webp?ph=4e95f92e87';
 
-const trustBadges = [
-  {
-    icon: Leaf,
-    title: 'Hazai Saját Termény',
-    description: 'Válogatott hajdúsági napraforgó és tönkölybúza.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Kíméletes Hideg Sajtolás',
-    description: 'Csigás préssel, hőkezelés és vegyszeres finomítás nélkül.',
-  },
-  {
-    icon: Heart,
-    title: 'Hagyományos Ízek',
-    description: 'Cukor- és adalékmentes homoktövis, berkenye és házi szörpök.',
-  },
-  {
-    icon: Truck,
-    title: 'Foxpost Csomagautomata',
-    description: 'Törésbiztos csomagolás és kényelmes átvétel.',
-  },
-];
-
 const categoryLabels: Record<CategoryFilter, string> = {
-  all: 'Összes termék',
+  all: 'Minden termék',
   olajok: 'Hidegen sajtolt olajok',
-  szorpok: 'Szörpök & Gyümölcslevek',
+  szorpok: 'Szörpök & gyümölcslevek',
   lisztek: 'Kézműves lisztek',
 };
 
 const testimonials = [
   {
     name: 'Kata',
-    quote: 'A tökmagolaj igazán finom és természetes. A csomagolás hangulatos, a szállítás pedig rendkívül gyors volt.',
+    quote:
+      'A tökmagolaj igazán finom és természetes. A csomagolás hangulatos, a szállítás pedig rendkívül gyors volt.',
   },
   {
     name: 'András',
-    quote: 'A berkenye szörp a kedvencünk. Gyümölcsös, természetes és olyan, mintha a kertünkben készült volna.',
+    quote:
+      'A berkenye szörp a kedvencünk. Gyümölcsös, természetes és olyan, mintha a kertünkben készült volna.',
   },
   {
     name: 'Eszter',
-    quote: 'A családi manufaktúra hangulata és a minőségi alapanyagok egyszerűen megérzésekre épülnek. Minden alkalommal megéri.',
+    quote:
+      'A családi manufaktúra hangulata és a minőségi alapanyagok egyszerűen megérződnek. Minden alkalommal megéri.',
   },
 ];
 
@@ -85,7 +69,8 @@ const fallbackProducts: ProductRecord[] = [
     id: 'fallback-1',
     title: 'Hidegen sajtolt tökmagolaj',
     price: 3990,
-    description: 'Tömör, aranyszínű olaj, amely a magok természetes aromáját és esszenciális értékeit őrzi meg.',
+    description:
+      'Tömör, aranyszínű olaj, amely a magok természetes aromáját és esszenciális értékeit őrzi meg.',
     image: heroImage,
     category: 'olajok',
   },
@@ -93,7 +78,8 @@ const fallbackProducts: ProductRecord[] = [
     id: 'fallback-2',
     title: 'Kézműves napraforgóolaj',
     price: 3290,
-    description: 'Könnyed, friss és gazdag ízű, egészségesebb főzéshez és salátákhoz.',
+    description:
+      'Könnyed, friss és gazdag ízű, egészségesebb főzéshez és salátákhoz.',
     image: sunflowerImage,
     category: 'olajok',
   },
@@ -101,7 +87,8 @@ const fallbackProducts: ProductRecord[] = [
     id: 'fallback-3',
     title: 'Homoktövis szörp',
     price: 2490,
-    description: 'Friss, aromás és természetes ízű gyümölcslé, cukor nélkül, gondosan elkészítve.',
+    description:
+      'Friss, aromás és természetes ízű gyümölcslé, gondosan elkészítve.',
     image: syrupImage,
     category: 'szorpok',
   },
@@ -109,7 +96,8 @@ const fallbackProducts: ProductRecord[] = [
     id: 'fallback-4',
     title: 'Tönkölybúza liszt',
     price: 1890,
-    description: 'Kőmalomban őrölt, teljes értékű liszt, tökéletes főzéshez és kovászos sütéshez.',
+    description:
+      'Kőmalomban őrölt, teljes értékű liszt, tökéletes főzéshez és kovászos sütéshez.',
     image: flourImage,
     category: 'lisztek',
   },
@@ -117,15 +105,34 @@ const fallbackProducts: ProductRecord[] = [
 
 function inferProductCategory(value: string): CategoryFilter {
   const lower = value.toLowerCase();
-  if (lower.includes('szörp') || lower.includes('szorp') || lower.includes('berkenye') || lower.includes('homoktövis')) {
+
+  if (
+    lower.includes('szörp') ||
+    lower.includes('szorp') ||
+    lower.includes('berkenye') ||
+    lower.includes('homoktövis')
+  ) {
     return 'szorpok';
   }
-  if (lower.includes('liszt') || lower.includes('búza') || lower.includes('gabona')) {
+
+  if (
+    lower.includes('liszt') ||
+    lower.includes('búza') ||
+    lower.includes('gabona')
+  ) {
     return 'lisztek';
   }
-  if (lower.includes('olaj') || lower.includes('napraforgó') || lower.includes('tök') || lower.includes('mák') || lower.includes('dió')) {
+
+  if (
+    lower.includes('olaj') ||
+    lower.includes('napraforgó') ||
+    lower.includes('tök') ||
+    lower.includes('mák') ||
+    lower.includes('dió')
+  ) {
     return 'olajok';
   }
+
   return 'all';
 }
 
@@ -135,17 +142,29 @@ function sanitizeText(value?: string) {
     : 'Kézműves, természetes és gondosan készült termék.';
 }
 
+function categoryName(category: CategoryFilter) {
+  if (category === 'olajok') return 'Olajok';
+  if (category === 'szorpok') return 'Szörpök';
+  if (category === 'lisztek') return 'Lisztek';
+  return 'Termék';
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<ProductRecord[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryFilter>('all');
   const [loading, setLoading] = useState(true);
   const [addedId, setAddedId] = useState<string | null>(null);
+
   const { addToCart } = useCart();
 
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const records = await pb.collection('products').getFullList({ sort: '-created' });
+        const records = await pb
+          .collection('products')
+          .getFullList({ sort: '-created' });
+
         setProducts(records as unknown as ProductRecord[]);
       } catch (error) {
         console.error('Hiba a termékek betöltésekor:', error);
@@ -159,343 +178,752 @@ export default function HomePage() {
 
   const visibleProducts = useMemo(() => {
     const source = products.length ? products : fallbackProducts;
-    if (selectedCategory === 'all') return source;
+
+    if (selectedCategory === 'all') {
+      return source;
+    }
+
     return source.filter((product) => {
       const productCategory = inferProductCategory(
-        `${product.category ?? ''} ${product.title ?? ''} ${product.description ?? ''}`
+        `${product.category ?? ''} ${product.title ?? ''} ${
+          product.description ?? ''
+        }`,
       );
+
       return productCategory === selectedCategory;
     });
   }, [products, selectedCategory]);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+
     setAddedId(product.id);
-    window.setTimeout(() => setAddedId(null), 1200);
+
+    window.setTimeout(() => {
+      setAddedId(null);
+    }, 1400);
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fffaf2,_#f8f3ee_45%,_#f3f1ec_100%)] text-neutral-900">
+    <div className="min-h-screen bg-[#f7f4ed] text-[#27251f]">
       <Header />
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-        <section className="relative mb-14 overflow-hidden rounded-[2rem] border border-amber-100 bg-gradient-to-br from-[#f7f0e4] via-white to-[#f5efe7] p-5 shadow-[0_30px_90px_-35px_rgba(95,75,39,0.45)] sm:p-8 lg:p-10">
-          <div className="absolute -right-8 top-0 h-52 w-52 rounded-full bg-amber-200/40 blur-3xl" />
-          <div className="absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-orange-200/30 blur-3xl" />
+      <main>
+        {/* =========================================================
+            HERO
+        ========================================================== */}
+        <section className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-[#25231d]">
+          <img
+            src={heroImage}
+            alt="Zsül Portékái – hidegen sajtolt termékek"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
 
-          <div className="relative grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
-            <div style={{ animation: 'fadeUp 0.7s ease-out both' }}>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                <Sparkles className="h-3.5 w-3.5" />
-                természetes ízek
+          <div className="absolute inset-0 bg-black/30" />
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
+
+          <div className="relative mx-auto flex min-h-[calc(100vh-72px)] max-w-[1500px] flex-col justify-between px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
+            <div className="flex items-center justify-between">
+              <div className="rounded-full border border-white/30 bg-black/10 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.28em] text-white backdrop-blur-sm">
+                Kézműves manufaktúra
               </div>
 
-              <h1 className="max-w-xl text-4xl font-black tracking-[-0.05em] text-neutral-900 sm:text-5xl lg:text-6xl">
-                A föld, a növények ritmusa és a tiszta ízek szeretete.
-              </h1>
+              <a
+                href="#products"
+                className="hidden items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-white transition hover:opacity-70 sm:flex"
+              >
+                Felfedezem
+                <ArrowDown className="h-4 w-4" />
+              </a>
+            </div>
 
-              <p className="mt-4 max-w-xl text-base leading-7 text-neutral-700 sm:text-lg">
-                Családi gazdaságunkból indult kézműves manufaktúránkban 100% természetes, hidegen sajtolt étolajokat, kőmalomban őrölt tönkölyliszteket és házi szörpöket készítünk.
+            <div className="max-w-4xl pb-8 pt-20 sm:pb-12 lg:pb-16">
+              <p className="mb-5 text-xs font-medium uppercase tracking-[0.3em] text-white/75 sm:text-sm">
+                Zsül Portékái
               </p>
 
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+              <h1 className="max-w-4xl text-[3.2rem] font-medium leading-[0.94] tracking-[-0.055em] text-white sm:text-6xl md:text-7xl lg:text-[7.2rem]">
+                Amit a föld ad,
+                <br />
+                azt gondosan
+                <br />
+                visszük tovább.
+              </h1>
+
+              <div className="mt-8 flex max-w-xl flex-col gap-6 sm:flex-row sm:items-end">
+                <p className="max-w-md text-sm leading-6 text-white/80 sm:text-base">
+                  Hajdúböszörményi családi gazdaságunkból származó alapanyagokból
+                  készítünk hidegen sajtolt olajokat, kézműves liszteket és
+                  házi szörpöket.
+                </p>
+
                 <a
                   href="#products"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#2c241d] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#1d1713]"
+                  className="group inline-flex shrink-0 items-center gap-3 text-sm font-semibold text-white"
                 >
-                  Nézz körül a kamránkban
-                  <ArrowRight className="h-4 w-4" />
+                  <span className="border-b border-white/60 pb-1">
+                    Nézz körül
+                  </span>
+
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 transition group-hover:bg-white group-hover:text-[#27251f]">
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            INTRO
+        ========================================================== */}
+        <section className="px-6 py-20 sm:px-10 sm:py-28 lg:px-16 lg:py-36">
+          <div className="mx-auto grid max-w-[1250px] gap-12 lg:grid-cols-[0.8fr_1.6fr] lg:gap-24">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#837b6b]">
+                01 — A mi világunk
+              </p>
+            </div>
+
+            <div>
+              <h2 className="max-w-4xl text-3xl font-medium leading-[1.08] tracking-[-0.04em] sm:text-4xl md:text-5xl lg:text-6xl">
+                Nem gyárban készülnek.
+                <br />
+                <span className="text-[#8a806d]">
+                  Hanem nálunk, odafigyeléssel.
+                </span>
+              </h2>
+
+              <div className="mt-8 max-w-2xl">
+                <p className="text-base leading-7 text-[#656055] sm:text-lg sm:leading-8">
+                  Hiszünk abban, hogy egy jó alapanyaghoz nem kell sokat
+                  hozzáadni. A saját termény, a kíméletes feldolgozás és a
+                  hagyományos tudás önmagában elég ahhoz, hogy valódi ízek
+                  szülessenek.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            IMAGE MOSAIC
+        ========================================================== */}
+        <section className="px-4 sm:px-6 lg:px-10">
+          <div className="mx-auto grid max-w-[1500px] gap-4 lg:grid-cols-12">
+            <div className="group relative min-h-[520px] overflow-hidden lg:col-span-7 lg:min-h-[720px]">
+              <img
+                src={sunflowerImage}
+                alt="Napraforgó és magvak"
+                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+
+              <div className="absolute bottom-0 left-0 p-7 text-white sm:p-10">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">
+                  A termőföldtől
+                </p>
+
+                <h3 className="mt-2 max-w-md text-3xl font-medium tracking-[-0.03em] sm:text-4xl">
+                  Saját terményből indulunk.
+                </h3>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:col-span-5 lg:grid-rows-[1fr_auto]">
+              <div className="group relative min-h-[380px] overflow-hidden lg:min-h-0">
+                <img
+                  src={flourImage}
+                  alt="Tönkölybúza és liszt"
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+
+                <div className="absolute bottom-0 left-0 p-7 text-white sm:p-9">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">
+                    Tiszta alapanyag
+                  </p>
+
+                  <h3 className="mt-2 text-2xl font-medium tracking-[-0.03em]">
+                    Kőmalomban őrölt lisztek.
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex min-h-[250px] flex-col justify-between bg-[#ded6c7] p-7 sm:p-9 lg:min-h-[280px]">
+                <div className="flex items-center justify-between">
+                  <Leaf className="h-5 w-5 text-[#746b5b]" />
+
+                  <span className="text-[10px] uppercase tracking-[0.25em] text-[#746b5b]">
+                    100% természetes
+                  </span>
+                </div>
+
+                <p className="max-w-sm text-2xl font-medium leading-tight tracking-[-0.03em] text-[#37342d] sm:text-3xl">
+                  „A kevesebb néha több. Főleg, ha az alapanyag jó.”
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            PRODUCTS
+        ========================================================== */}
+        <section
+          id="products"
+          className="scroll-mt-20 px-6 py-24 sm:px-10 sm:py-32 lg:px-16 lg:py-40"
+        >
+          <div className="mx-auto max-w-[1250px]">
+            <div className="mb-12 flex flex-col gap-8 border-b border-[#d9d3c8] pb-8 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#837b6b]">
+                  02 — A kamránkból
+                </p>
+
+                <h2 className="mt-4 max-w-2xl text-4xl font-medium leading-none tracking-[-0.05em] sm:text-5xl lg:text-6xl">
+                  Válogass a
+                  <br />
+                  kedvenceinkből.
+                </h2>
+              </div>
+
+              <div className="flex max-w-full gap-5 overflow-x-auto pb-1">
+                {(Object.keys(categoryLabels) as CategoryFilter[]).map(
+                  (category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setSelectedCategory(category)}
+                      className={`shrink-0 border-b pb-2 text-xs font-medium transition ${
+                        selectedCategory === category
+                          ? 'border-[#302d27] text-[#302d27]'
+                          : 'border-transparent text-[#8b8579] hover:text-[#302d27]'
+                      }`}
+                    >
+                      {categoryLabels[category]}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="py-24 text-center text-sm text-[#837b6b]">
+                Termékek betöltése...
+              </div>
+            ) : visibleProducts.length === 0 ? (
+              <div className="py-24 text-center">
+                <p className="text-lg font-medium">
+                  Jelenleg nincs ilyen kategóriájú termék.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('all')}
+                  className="mt-4 border-b border-[#302d27] pb-1 text-sm"
+                >
+                  Összes termék megtekintése
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2">
+                {visibleProducts.map((product, index) => {
+                  const imageUrl = product.image
+                    ? getImageUrl(product, product.image)
+                    : heroImage;
+
+                  const isJustAdded = addedId === product.id;
+
+                  const category = inferProductCategory(
+                    `${product.category ?? ''} ${product.title ?? ''} ${
+                      product.description ?? ''
+                    }`,
+                  );
+
+                  return (
+                    <article
+                      key={product.id}
+                      className={`group ${
+                        index % 3 === 1 ? 'sm:translate-y-16' : ''
+                      }`}
+                    >
+                      <div className="relative overflow-hidden bg-[#e5e0d6]">
+                        <div className="aspect-[4/5]">
+                          <img
+                            src={imageUrl}
+                            alt={product.title}
+                            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.035]"
+                          />
+                        </div>
+
+                        <div className="absolute left-5 top-5">
+                          <span className="bg-[#f7f4ed]/90 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-[#4c483f] backdrop-blur-sm">
+                            {categoryName(category)}
+                          </span>
+                        </div>
+
+                        <div className="absolute bottom-5 right-5">
+                          <button
+                            type="button"
+                            onClick={() => handleAddToCart(product)}
+                            aria-label={`${product.title} hozzáadása a kosárhoz`}
+                            className={`flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition ${
+                              isJustAdded
+                                ? 'bg-[#506b4d] text-white'
+                                : 'bg-white text-[#28251f] hover:scale-105'
+                            }`}
+                          >
+                            {isJustAdded ? (
+                              <Check className="h-5 w-5" />
+                            ) : (
+                              <Plus className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-6 pt-5">
+                        <div className="max-w-md">
+                          <h3 className="text-xl font-medium tracking-[-0.025em] text-[#2c2923] sm:text-2xl">
+                            {product.title}
+                          </h3>
+
+                          <p className="mt-2 max-w-sm text-sm leading-6 text-[#777166]">
+                            {sanitizeText(product.description)}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-base font-semibold text-[#2c2923]">
+                            {product.price.toLocaleString('hu-HU')} Ft
+                          </p>
+
+                          <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[#999286]">
+                            {categoryName(category)}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* =========================================================
+            FULL WIDTH STORY IMAGE
+        ========================================================== */}
+        <section className="relative overflow-hidden">
+          <div className="group relative h-[620px] sm:h-[720px] lg:h-[820px]">
+            <img
+              src={syrupImage}
+              alt="Házi szörpök és gyümölcsök"
+              className="absolute inset-0 h-full w-full object-cover transition duration-1000 group-hover:scale-[1.02]"
+            />
+
+            <div className="absolute inset-0 bg-black/20" />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
+            <div className="absolute bottom-0 left-0 right-0 px-6 pb-10 sm:px-10 sm:pb-14 lg:px-16 lg:pb-20">
+              <div className="mx-auto max-w-[1250px]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">
+                  03 — A történetünk
+                </p>
+
+                <h2 className="mt-4 max-w-4xl text-4xl font-medium leading-[0.98] tracking-[-0.045em] text-white sm:text-5xl md:text-6xl lg:text-7xl">
+                  A családi gazdaságtól
+                  <br />
+                  az asztalodig.
+                </h2>
+
+                <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                  <p className="max-w-lg text-sm leading-6 text-white/80 sm:text-base sm:leading-7">
+                    Hajdúböszörményben, a családi gazdaságunk környezetében
+                    dolgozunk a növények, a föld és a hagyományos feldolgozás
+                    iránti tisztelettel.
+                  </p>
+
+                  <a
+                    href="#about"
+                    className="group inline-flex w-fit items-center gap-3 text-sm font-semibold text-white"
+                  >
+                    <span className="border-b border-white/60 pb-1">
+                      Ismerj meg minket
+                    </span>
+
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 transition group-hover:bg-white group-hover:text-[#27251f]">
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            ABOUT / VALUES
+        ========================================================== */}
+        <section
+          id="about"
+          className="scroll-mt-20 px-6 py-24 sm:px-10 sm:py-32 lg:px-16 lg:py-40"
+        >
+          <div className="mx-auto max-w-[1250px]">
+            <div className="grid gap-16 lg:grid-cols-[0.75fr_1.25fr] lg:gap-28">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#837b6b]">
+                  04 — Ami fontos nekünk
+                </p>
+              </div>
+
+              <div>
+                <h2 className="max-w-4xl text-4xl font-medium leading-[1.04] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+                  Természetes alapanyag.
+                  <br />
+                  Kíméletes feldolgozás.
+                  <br />
+                  <span className="text-[#8a806d]">Valódi ízek.</span>
+                </h2>
+
+                <div className="mt-14 divide-y divide-[#d9d3c8] border-y border-[#d9d3c8]">
+                  <div className="grid gap-4 py-7 sm:grid-cols-[80px_1fr]">
+                    <Leaf className="mt-1 h-5 w-5 text-[#756d5d]" />
+
+                    <div>
+                      <h3 className="text-lg font-medium">
+                        Hazai saját termény
+                      </h3>
+
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-[#777166]">
+                        Válogatott hajdúsági napraforgó és tönkölybúza, közvetlenül
+                        a családi gazdaságunkból.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 py-7 sm:grid-cols-[80px_1fr]">
+                    <Sparkles className="mt-1 h-5 w-5 text-[#756d5d]" />
+
+                    <div>
+                      <h3 className="text-lg font-medium">
+                        Kíméletes hideg sajtolás
+                      </h3>
+
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-[#777166]">
+                        Csigás préssel, hőkezelés és vegyszeres finomítás nélkül
+                        dolgozunk, hogy az alapanyag saját karaktere megmaradjon.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 py-7 sm:grid-cols-[80px_1fr]">
+                    <Heart className="mt-1 h-5 w-5 text-[#756d5d]" />
+
+                    <div>
+                      <h3 className="text-lg font-medium">
+                        Hagyományos ízek
+                      </h3>
+
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-[#777166]">
+                        Házi szörpök, gyümölcslevek és kézműves termékek olyan
+                        receptek alapján, amelyekben az alapanyag a főszereplő.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 py-7 sm:grid-cols-[80px_1fr]">
+                    <Truck className="mt-1 h-5 w-5 text-[#756d5d]" />
+
+                    <div>
+                      <h3 className="text-lg font-medium">
+                        Gondos csomagolás
+                      </h3>
+
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-[#777166]">
+                        Biztonságosan becsomagolva, Foxpost csomagautomatába,
+                        hogy a termék ugyanúgy érkezzen meg hozzád, ahogy nálunk
+                        elhagyta a műhelyt.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            ABOUT IMAGE SPLIT
+        ========================================================== */}
+        <section className="px-4 sm:px-6 lg:px-10">
+          <div className="mx-auto grid max-w-[1500px] gap-4 lg:grid-cols-2">
+            <div className="relative min-h-[500px] overflow-hidden bg-[#ded6c7] sm:min-h-[650px]">
+              <img
+                src={flourImage}
+                alt="Tönkölybúza liszt"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+
+            <div className="flex min-h-[500px] flex-col justify-between bg-[#302d27] p-8 text-[#f7f4ed] sm:min-h-[650px] sm:p-12 lg:p-16">
+              <div className="flex justify-between">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-white/50">
+                  Zsül Portékái
+                </p>
+
+                <p className="text-[10px] uppercase tracking-[0.28em] text-white/50">
+                  Hajdúböszörmény
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-5 max-w-xl text-[10px] uppercase tracking-[0.25em] text-white/50">
+                  A mi szemléletünk
+                </p>
+
+                <h2 className="max-w-2xl text-4xl font-medium leading-[1.02] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+                  „Jó termékhez először jó alapanyag kell.”
+                </h2>
+
+                <p className="mt-8 max-w-xl text-sm leading-7 text-white/60">
+                  A feldolgozás nálunk nem arról szól, hogy minél többet
+                  változtassunk az alapanyagon. Inkább arról, hogy minél jobban
+                  megőrizzük azt, ami eleve jó benne.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            REVIEWS
+        ========================================================== */}
+        <section
+          id="reviews"
+          className="scroll-mt-20 px-6 py-24 sm:px-10 sm:py-32 lg:px-16 lg:py-40"
+        >
+          <div className="mx-auto max-w-[1250px]">
+            <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-24">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#837b6b]">
+                  05 — Vásárlóink mondták
+                </p>
+
+                <h2 className="mt-5 text-4xl font-medium leading-none tracking-[-0.045em] sm:text-5xl">
+                  Amit mások
+                  <br />
+                  gondolnak.
+                </h2>
+              </div>
+
+              <div className="divide-y divide-[#d9d3c8] border-y border-[#d9d3c8]">
+                {testimonials.map(({ name, quote }) => (
+                  <article
+                    key={name}
+                    className="py-8 sm:py-10"
+                  >
+                    <div className="flex items-center gap-1 text-[#9b8052]">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star
+                          key={`${name}-${index}`}
+                          className="h-3.5 w-3.5 fill-current"
+                        />
+                      ))}
+                    </div>
+
+                    <p className="mt-5 max-w-2xl text-xl font-medium leading-8 tracking-[-0.02em] text-[#36332c] sm:text-2xl">
+                      “{quote}”
+                    </p>
+
+                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#898276]">
+                      {name}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            FINAL CTA
+        ========================================================== */}
+        <section className="relative overflow-hidden bg-[#d8d0c0]">
+          <div className="mx-auto grid max-w-[1500px] lg:grid-cols-2">
+            <div className="flex min-h-[580px] flex-col justify-between p-8 sm:p-12 lg:min-h-[680px] lg:p-16 xl:p-20">
+              <div className="flex items-center justify-between">
+                <img
+                  src={logoUrl}
+                  alt="Zsül Portékái"
+                  className="h-12 w-auto object-contain mix-blend-multiply"
+                />
+
+                <p className="text-[10px] uppercase tracking-[0.25em] text-[#716a5c]">
+                  06 — Kezdjük itt
+                </p>
+              </div>
+
+              <div>
+                <h2 className="max-w-2xl text-5xl font-medium leading-[0.98] tracking-[-0.05em] text-[#302d27] sm:text-6xl lg:text-7xl">
+                  Vidd haza
+                  <br />
+                  a természetes
+                  <br />
+                  ízeket.
+                </h2>
+
+                <a
+                  href="#products"
+                  className="group mt-9 inline-flex items-center gap-4 text-sm font-semibold text-[#302d27]"
+                >
+                  <span className="border-b border-[#302d27] pb-1">
+                    Termékek megtekintése
+                  </span>
+
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#302d27] transition group-hover:bg-[#302d27] group-hover:text-white">
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
                 </a>
               </div>
             </div>
 
-            <div className="relative" style={{ animation: 'fadeUp 1s ease-out 0.15s both' }}>
-              <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
-                <div className="overflow-hidden rounded-[1.6rem] border border-amber-100 bg-white/80 p-2 shadow-[0_25px_70px_-35px_rgba(96,78,36,0.55)]">
-                  <img
-                    src={heroImage}
-                    alt="A Zsül Portékái hidegen sajtolt olajok manufaktúrája"
-                    className="h-[420px] w-full rounded-[1.2rem] object-cover"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div className="overflow-hidden rounded-[1.4rem] border border-amber-100 bg-white/80 p-2 shadow-[0_25px_70px_-35px_rgba(96,78,36,0.45)]">
-                    <img
-                      src={sunflowerImage}
-                      alt="Kézműves napraforgó és magvak"
-                      className="h-40 w-full rounded-[1rem] object-cover"
-                    />
-                  </div>
-                  <div className="rounded-[1.4rem] border border-amber-100 bg-[#f9f5ee] p-4 shadow-sm">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">manufaktúra</p>
-                    <p className="mt-2 text-3xl font-black text-neutral-900">100%</p>
-                    <p className="mt-1 text-sm text-neutral-600">természetes alapanyag</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-16">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {trustBadges.map(({ icon: Icon, title, description }) => (
-              <div
-                key={title}
-                className="group rounded-[1.65rem] border border-neutral-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5ebdc] text-[#7a5a2b] transition duration-300 group-hover:bg-[#f0e2c9]">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-bold text-neutral-900">{title}</h3>
-                <p className="mt-2 text-sm leading-6 text-neutral-600">{description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section id="products" className="mb-16 scroll-mt-24">
-          <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">Válogatás a kamránkból</p>
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-neutral-900">
-                Kiemelt termékeink a természetes mindennapokhoz
-              </h2>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(categoryLabels) as CategoryFilter[]).map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setSelectedCategory(category)}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    selectedCategory === category
-                      ? 'border-[#d7b98e] bg-[#f7efe3] text-[#654b24] shadow-sm'
-                      : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:text-neutral-900'
-                  }`}
-                >
-                  {categoryLabels[category]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-24 text-neutral-500">
-              <span className="animate-pulse">Termékek betöltése...</span>
-            </div>
-          ) : visibleProducts.length === 0 ? (
-            <div className="rounded-[1.75rem] border border-dashed border-neutral-300 bg-white py-20 text-center">
-              <p className="text-lg font-semibold text-neutral-800">Jelenleg nincs ilyen kategóriájú termék.</p>
-              <p className="mt-2 text-sm text-neutral-500">Próbálj meg másik szűrőt választani.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-              {visibleProducts.map((product) => {
-                const imageUrl = product.image ? getImageUrl(product, product.image) : heroImage;
-                const isJustAdded = addedId === product.id;
-                const category = inferProductCategory(
-                  `${product.category ?? ''} ${product.title ?? ''} ${product.description ?? ''}`
-                );
-
-                return (
-                  <article
-                    key={product.id}
-                    className="group overflow-hidden rounded-[1.75rem] border border-[#eadac2] bg-[#fffdf9] shadow-[0_20px_50px_-30px_rgba(128,99,48,0.28)] transition duration-300 hover:-translate-y-1 hover:shadow-xl"
-                  >
-                    <div className="relative aspect-[4/5] overflow-hidden bg-neutral-100">
-                      <img
-                        src={imageUrl}
-                        alt={product.title}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-                        <span className="rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-700">
-                          {category === 'olajok' ? 'Olaj' : category === 'szorpok' ? 'Szörp' : 'Liszt'}
-                        </span>
-                        <span className="rounded-full bg-[#d6a75c] px-2.5 py-1 text-[10px] font-bold text-[#2b1e11]">
-                          4.9★
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 p-5">
-                      <div>
-                        <h3 className="text-xl font-bold text-neutral-900">{product.title}</h3>
-                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500">
-                          {sanitizeText(product.description)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-[#f0e7d8] pt-4">
-                        <div>
-                          <p className="text-lg font-black text-[#2c241d]">
-                            {product.price.toLocaleString('hu-HU')} Ft
-                          </p>
-                          <p className="text-xs text-neutral-500">{categoryLabels[category]}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleAddToCart(product)}
-                          className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
-                            isJustAdded ? 'bg-emerald-600 text-white' : 'bg-[#2c241d] text-white hover:bg-[#1d1713]'
-                          }`}
-                        >
-                          {isJustAdded ? (
-                            <>
-                              <Check className="h-3.5 w-3.5" />
-                              Hozzáadva
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="h-3.5 w-3.5" />
-                              Kosárba
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section id="about" className="mb-16 scroll-mt-24 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm sm:p-8">
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="relative min-h-[500px] overflow-hidden lg:min-h-[680px]">
               <img
-                src={flourImage}
-                alt="Tönkölybúza liszt és gabona"
-                className="h-64 w-full rounded-[1.5rem] object-cover"
+                src={heroImage}
+                alt="Zsül Portékái"
+                className="absolute inset-0 h-full w-full object-cover"
               />
-              <img
-                src={sunflowerImage}
-                alt="Napraforgó és magvak a manufaktúrában"
-                className="h-64 w-full rounded-[1.5rem] object-cover"
-              />
+
+              <div className="absolute inset-0 bg-black/10" />
             </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">A Zsül Portékái története</p>
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-neutral-900">
-                Családi gazdaságunkból indult a természetes, tiszta ízek szeretete.
-              </h2>
-              <p className="mt-4 text-base leading-7 text-neutral-600">
-                Hajdúböszörményben, a családi gazdaságunk környezetében kezdtünk el dolgozni a növények, a föld és a hagyományos feldolgozás iránti tisztelettel. Úgy készítjük termékeinket, hogy a nyersanyagok saját íze és minősége megmaradjon, a hőkezelés és a vegyszeres finomítás nélkül.
-              </p>
-              <p className="mt-4 text-base leading-7 text-neutral-600">
-                A kíméletes sajtolás, a kézi gondosság és a hagyományos receptek ma is az alapjai a kézműves kamránknak — és annak, hogy a természetes ízek egyszerűen a mindennapok részévé váljanak.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section id="story" className="mb-16 scroll-mt-24 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm sm:p-8">
-          <div className="grid gap-7 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-            <div className="overflow-hidden rounded-[1.75rem]">
-              <img
-                src={syrupImage}
-                alt="Manufaktúra és hagyományos gyümölcsös szörpök"
-                className="h-[420px] w-full object-cover"
-              />
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">Hogyan készül?</p>
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-neutral-900">
-                Kíméletes feldolgozás, természetes íz és közeli gyártás.
-              </h2>
-
-              <div className="mt-6 space-y-4">
-                <div className="flex gap-3 rounded-2xl bg-neutral-50 p-4">
-                  <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#f5ebdc] text-[#7a5a2b]">
-                    <Leaf className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-neutral-900">Szelektált nyersanyagok</h3>
-                    <p className="mt-1 text-sm text-neutral-600">Válogatott terményekből, mindig a föld és a szezon ritmusához igazodva készítjük termékeinket.</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 rounded-2xl bg-neutral-50 p-4">
-                  <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#f5ebdc] text-[#7a5a2b]">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-neutral-900">Hidegen sajtolt és gondosan őrzött</h3>
-                    <p className="mt-1 text-sm text-neutral-600">A hőkezelés és a vegyszeres finomítás nélkül megmarad a természetes íz, az E-vitamin és az antioxidáns tartalom.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="reviews" className="mb-16 scroll-mt-24">
-          <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">Vélemények</p>
-            <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-neutral-900">
-              A családok kedvenc kézműves termékei
-            </h2>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-3">
-            {testimonials.map(({ name, quote }) => (
-              <article key={name} className="rounded-[1.7rem] border border-neutral-200 bg-white p-5 shadow-sm">
-                <div className="mb-4 flex items-center gap-1 text-amber-500">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Star key={`${name}-${index}`} className="h-4 w-4 fill-current" />
-                  ))}
-                </div>
-                <p className="text-base leading-7 text-neutral-700">“{quote}”</p>
-                <div className="mt-5 border-t border-neutral-100 pt-4">
-                  <p className="font-bold text-neutral-900">{name}</p>
-                </div>
-              </article>
-            ))}
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-neutral-200 bg-[#f8f4ee]">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-3">
-          <div>
-            <img src={logoUrl} alt="Zsül Portékái logó" className="h-12 w-auto object-contain" />
-            <p className="mt-4 max-w-xs text-sm leading-6 text-neutral-600">
-              A hajdúböszörményi családi manufaktúra, ahol a természetes alapanyagokból és a hagyományos készítési módokból születnek a tiszta ízek.
-            </p>
+      {/* =========================================================
+          FOOTER
+      ========================================================== */}
+      <footer className="bg-[#24221d] px-6 py-14 text-[#f4f0e7] sm:px-10 lg:px-16 lg:py-20">
+        <div className="mx-auto max-w-[1250px]">
+          <div className="grid gap-12 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
+            <div>
+              <img
+                src={logoUrl}
+                alt="Zsül Portékái logó"
+                className="h-14 w-auto object-contain brightness-0 invert"
+              />
+
+              <p className="mt-7 max-w-sm text-sm leading-7 text-white/50">
+                A hajdúböszörményi családi manufaktúra, ahol természetes
+                alapanyagokból és hagyományos készítési módokból születnek a
+                tiszta ízek.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
+                Kapcsolat
+              </p>
+
+              <div className="mt-6 space-y-3 text-sm text-white/65">
+                <p>Hajdúböszörmény, Magyarország</p>
+                <p>info@zsulportekai.hu</p>
+                <p>+36 20 123 4567</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
+                Információ
+              </p>
+
+              <div className="mt-6 space-y-3 text-sm text-white/65">
+                <a
+                  href="#products"
+                  className="block transition hover:text-white"
+                >
+                  Termékek
+                </a>
+
+                <a href="#about" className="block transition hover:text-white">
+                  Rólunk
+                </a>
+
+                <a
+                  href="#reviews"
+                  className="block transition hover:text-white"
+                >
+                  Vélemények
+                </a>
+
+                <a href="#" className="block transition hover:text-white">
+                  Általános szerződési feltételek
+                </a>
+
+                <a href="#" className="block transition hover:text-white">
+                  Adatkezelési tájékoztató
+                </a>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-neutral-900">Kapcsolat</h3>
-            <ul className="mt-4 space-y-2 text-sm text-neutral-600">
-              <li>Hajdúböszörmény, Magyarország</li>
-              <li>info@zsulportekai.hu</li>
-              <li>+36 20 123 4567</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-neutral-900">Foxpost & jog</h3>
-            <ul className="mt-4 space-y-2 text-sm text-neutral-600">
-              <li>Foxpost csomagautomata kézbesítés</li>
-              <li>Általános szerződési feltételek</li>
-              <li>Adatkezelési tájékoztató</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="border-t border-neutral-200 bg-white/50">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="mt-16 flex flex-col gap-3 border-t border-white/10 pt-6 text-[11px] text-white/35 sm:flex-row sm:items-center sm:justify-between">
             <p>© 2026 Zsül Portékái. Minden jog fenntartva.</p>
-            <p>Gyors, biztonságos kiszállítás hazánkban.</p>
+
+            <p>Hajdúböszörmény · Magyarország</p>
           </div>
         </div>
       </footer>
+
+      {/* =========================================================
+          SMALL GLOBAL ANIMATIONS
+      ========================================================== */}
+      <style jsx global>{`
+        html {
+          scroll-behavior: smooth;
+        }
+
+        ::selection {
+          background: #302d27;
+          color: #f7f4ed;
+        }
+
+        @keyframes imageReveal {
+          from {
+            opacity: 0;
+            transform: scale(1.025);
+          }
+
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        img {
+          animation: imageReveal 0.9s ease-out both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          html {
+            scroll-behavior: auto;
+          }
+
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

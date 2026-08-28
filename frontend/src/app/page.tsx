@@ -255,8 +255,7 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<ProductRecord | null>(
     null,
   );
-  const [imageZoom, setImageZoom] = useState(1.25);
-  const [isPixelated, setIsPixelated] = useState(false);
+  const [imageZoom, setImageZoom] = useState(1.5);
 
   const { addToCart } = useCart();
 
@@ -308,14 +307,12 @@ export default function HomePage() {
 
   const openProductModal = (product: ProductRecord) => {
     setSelectedProduct(product);
-    setImageZoom(1.25);
-    setIsPixelated(false);
+    setImageZoom(1.5);
   };
 
   const closeProductModal = () => {
     setSelectedProduct(null);
-    setImageZoom(1.25);
-    setIsPixelated(false);
+    setImageZoom(1.5);
   };
 
   return (
@@ -577,7 +574,6 @@ export default function HomePage() {
                         className="h-full w-full object-contain transition-transform duration-200 ease-out"
                         style={{
                           transform: `scale(${imageZoom})`,
-                          imageRendering: isPixelated ? 'pixelated' : 'auto',
                         }}
                       />
                     </div>
@@ -588,7 +584,7 @@ export default function HomePage() {
                       type="button"
                       onClick={() =>
                         setImageZoom((zoom) =>
-                          Math.max(1, Number((zoom - 0.2).toFixed(2))),
+                          Math.max(1, Number((zoom - 0.25).toFixed(2))),
                         )
                       }
                       className="rounded-full border border-[#d3cabd] bg-white px-3 py-1.5 text-sm font-medium text-[#2d2923] transition hover:border-[#2d2923]"
@@ -599,8 +595,8 @@ export default function HomePage() {
                     <input
                       type="range"
                       min="1"
-                      max="2.5"
-                      step="0.05"
+                      max="4"
+                      step="0.1"
                       value={imageZoom}
                       onChange={(event) =>
                         setImageZoom(Number(event.target.value))
@@ -613,24 +609,12 @@ export default function HomePage() {
                       type="button"
                       onClick={() =>
                         setImageZoom((zoom) =>
-                          Math.min(2.5, Number((zoom + 0.2).toFixed(2))),
+                          Math.min(4, Number((zoom + 0.25).toFixed(2))),
                         )
                       }
                       className="rounded-full border border-[#d3cabd] bg-white px-3 py-1.5 text-sm font-medium text-[#2d2923] transition hover:border-[#2d2923]"
                     >
                       +
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsPixelated((value) => !value)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] transition ${
-                        isPixelated
-                          ? 'border-[#2d2923] bg-[#2d2923] text-white'
-                          : 'border-[#d3cabd] bg-white text-[#2d2923]'
-                      }`}
-                    >
-                      {isPixelated ? 'Pixelnézet bekapcsolva' : 'Pixelnézet'}
                     </button>
                   </div>
                 </div>

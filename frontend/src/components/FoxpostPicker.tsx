@@ -10,10 +10,17 @@ export type FoxpostSelection = {
 };
 
 type FoxpostPickerProps = {
+  value?: FoxpostSelection | null;
   onSelect: (selection: FoxpostSelection) => void;
 };
 
-const isFoxpostOrigin = (origin: string) => /foxpost\.hu$/i.test(origin) || /foxpost\.hu\b/i.test(origin);
+const isFoxpostOrigin = (origin: string) => {
+  try {
+    return new URL(origin).hostname.toLowerCase().endsWith('foxpost.hu');
+  } catch {
+    return /foxpost\.hu$/i.test(origin) || /foxpost\.hu\b/i.test(origin);
+  }
+};
 
 const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -55,9 +62,14 @@ const extractFoxpostValue = (source: unknown, keys: string[]) => {
   return undefined;
 };
 
-export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
-  const [selected, setSelected] = useState<FoxpostSelection | null>(null);
-  const [showPicker, setShowPicker] = useState(true);
+export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
+  const [selected, setSelected] = useState<FoxpostSelection | null>(value ?? null);
+  const [showPicker, setShowPicker] = useState(!value);
+
+  useEffect(() => {
+    setSelected(value ?? null);
+    setShowPicker(!value);
+  }, [value]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {

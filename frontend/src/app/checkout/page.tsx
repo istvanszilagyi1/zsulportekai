@@ -360,7 +360,7 @@ export default function CheckoutPage() {
                       </p>
                     </div>
 
-                    <FoxpostPicker onSelect={setFoxpostSelection} />
+                    <FoxpostPicker value={foxpostSelection} onSelect={setFoxpostSelection} />
                   </div>
                 ) : (
                   <div className="grid gap-5 rounded-[22px] border border-[#e0d8cb] bg-[#faf8f5] p-4 sm:grid-cols-2 sm:p-5">

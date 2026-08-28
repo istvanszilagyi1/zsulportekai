@@ -45,6 +45,33 @@ const storyImage =
 const recipeImage =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000156-8e5ba8e5bc/zsulportekai-2025-december-16-kedvenc-kalacs-receptem.jpg.webp?ph=4e95f92e87';
 
+const galleryImageOne =
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000180-8da838da85/zsulportekai-2026-januar-16-vasarlas-kozvetlenul-a-manufakturanal.jpg.webp?ph=4e95f92e87';
+
+const galleryImageTwo =
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000190-ede95ede97/zsulportekai-2026-aprilis-24-olajutes-nalunk.jpg.webp?ph=4e95f92e87';
+
+const galleryImageThree =
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000200-43b5c43b5e/zsulportekai-2026-junius-5-az-utolso-mozzanat.jpg.webp?ph=4e95f92e87';
+
+const galleryImages = [
+  {
+    src: galleryImageOne,
+    label: 'Vásárlás a manufaktúránál',
+    alt: 'Vásárlás közvetlenül a manufaktúránál',
+  },
+  {
+    src: galleryImageTwo,
+    label: 'Olajút nálunk',
+    alt: 'Olajút és gyártás a manufaktúrában',
+  },
+  {
+    src: galleryImageThree,
+    label: 'Az utolsó mozzanat',
+    alt: 'A kézműves készítés utolsó mozzanata',
+  },
+];
+
 const categoryLabels: Record<CategoryFilter, string> = {
   all: 'Minden termék',
   olajok: 'Hidegen sajtolt olajok',
@@ -372,6 +399,49 @@ export default function HomePage() {
                   „A kevesebb néha több. Főleg, ha az alapanyag jó.”
                 </p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            RESPONSIVE PHOTO GALLERY
+        ========================================================== */}
+        <section className="px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
+          <div className="mx-auto max-w-[1250px]">
+            <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#837b6b]">
+                  02 — A mi műhelyünk
+                </p>
+
+                <h2 className="mt-4 text-3xl font-medium leading-none tracking-[-0.05em] text-[#2a2723] sm:text-4xl lg:text-5xl">
+                  Képek a mindennapjainkból.
+                </h2>
+              </div>
+
+              <p className="max-w-md text-sm leading-6 text-[#6f685f]">
+                A saját készítés, a figyelmes feldolgozás és a közvetlen kapcsolat a termékekkel.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {galleryImages.map(({ src, label, alt }) => (
+                <div key={label} className="group relative overflow-hidden rounded-[24px] bg-[#e7dfd1] shadow-[0_12px_30px_rgba(38,30,22,0.06)]">
+                  <div className="aspect-[4/5] overflow-hidden">
+                    <img
+                      src={src}
+                      alt={alt}
+                      className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
+                    />
+                  </div>
+
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent p-4 sm:p-5">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/80">
+                      {label}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -767,7 +837,7 @@ export default function HomePage() {
                 <img
                   src={logoUrl}
                   alt="Zsül Portékái"
-                  className="h-12 w-auto object-contain mix-blend-multiply"
+                  className="h-12 w-auto max-w-[200px] object-contain mix-blend-multiply"
                 />
 
                 <p className="text-[10px] uppercase tracking-[0.25em] text-[#716a5c]">
@@ -819,11 +889,13 @@ export default function HomePage() {
         <div className="mx-auto max-w-[1250px]">
           <div className="grid gap-12 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
             <div>
-              <img
-                src={logoUrl}
-                alt="Zsül Portékái logó"
-                className="h-14 w-auto object-contain brightness-0 invert"
-              />
+              <div className="inline-flex items-center justify-start">
+                <img
+                  src={logoUrl}
+                  alt="Zsül Portékái logó"
+                  className="h-14 w-auto max-w-[220px] object-contain brightness-0 invert"
+                />
+              </div>
 
               <p className="mt-7 max-w-sm text-sm leading-7 text-white/50">
                 A hajdúböszörményi családi manufaktúra, ahol természetes

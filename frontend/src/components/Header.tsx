@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
   Heart,
@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { getImageUrl } from '@/lib/pocketbase';
 
 const navigation = [
   { label: 'Portékáink', href: '#products', icon: Package },
@@ -26,24 +27,49 @@ const navigation = [
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
+const resolveProductImage = (product: { image?: string | null } | null, fallback = logoUrl) => {
+  if (!product?.image) return fallback;
+
+  if (typeof product.image === 'string' && /^https?:\/\//.test(product.image)) {
+    return product.image;
+  }
+
+  return getImageUrl(product, product.image);
+};
+
 export default function Header() {
   const { cart, totalItems, totalPrice, updateQuantity, removeFromCart, clearCart } =
     useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-[#e5e0d6] bg-[#f7f4ed]/95 backdrop-blur-md">
+      <header
+        className={`sticky top-0 z-50 border-b border-[#e5e0d6] bg-[#f7f4ed]/95 backdrop-blur-md transition-all duration-300 ease-out ${
+          scrollY > 0 ? 'shadow-[0_12px_24px_rgba(29,25,20,0.06)]' : ''
+        }`}
+        style={{ transform: `translateY(${Math.min(scrollY * 0.08, 8)}px)` }}
+      >
         <div className="mx-auto flex h-[76px] max-w-[1500px] items-center justify-between px-6 sm:px-10 lg:px-16">
-          <a href="/" aria-label="Zsül Portékái kezdőlap" className="group flex items-center">
+          <a href="/" aria-label="Zsül Portékái kezdőlap" className="group relative z-10 flex items-center overflow-hidden pr-2">
             <Image
               src={logoUrl}
               alt="Zsül Portékái"
               width={170}
               height={62}
               priority
-              className="h-auto w-[125px] object-contain mix-blend-multiply transition-opacity duration-300 group-hover:opacity-70 sm:w-[145px]"
+              className="h-auto w-[110px] object-contain mix-blend-multiply transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-[1.03] group-hover:opacity-75 sm:w-[130px]"
             />
           </a>
 
@@ -201,9 +227,9 @@ export default function Header() {
                 >
                   <div className="relative h-24 w-20 shrink-0 overflow-hidden bg-[#e5dfd4]">
                     <img
-                      src={product.image || logoUrl}
+                      src={resolveProductImage(product, logoUrl)}
                       alt={product.title}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                     />
                   </div>
 

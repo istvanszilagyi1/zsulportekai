@@ -1076,8 +1076,12 @@ export default function HomePage() {
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
                 <p>Cím: 4220 Hajdúböszörmény, Kisböszörmény utca 3.</p>
-                <p>Telefon: 06 70 368 2132</p>
-                <p>E-mail: zsulportekai@gmail.com</p>
+                <a href="tel:+36703682132" className="block transition hover:text-white">
+                  Telefon: +36 70 368 2132
+                </a>
+                <a href="mailto:zsulportekai@gmail.com" className="block transition hover:text-white">
+                  E-mail: zsulportekai@gmail.com
+                </a>
               </div>
             </div>
 

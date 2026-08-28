@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Clock3, Package, Search, ShieldCheck, Truck } from 'lucide-react';
+import { Check, Clock3, LockKeyhole, LogOut, Package, Search, ShieldCheck, Truck } from 'lucide-react';
 import Header from '@/components/Header';
 import { pb } from '@/lib/pocketbase';
 
@@ -41,25 +41,66 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+
+    try {
+      const records = await pb.collection('orders').getFullList({
+        sort: '-created',
+      });
+
+      setOrders(records as unknown as OrderRecord[]);
+    } catch (error) {
+      console.error('Admin megrendelések betöltése nem sikerült:', error);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchOrders() {
-      try {
-        const records = await pb.collection('orders').getFullList({
-          sort: '-created',
-          expand: 'items',
-        });
+    const authenticated = Boolean(pb.authStore.isValid && pb.authStore.model);
+    setIsAuthenticated(authenticated);
 
-        setOrders(records as unknown as OrderRecord[]);
-      } catch (error) {
-        console.error('Admin megrendelések betöltése nem sikerült:', error);
-      } finally {
-        setLoading(false);
-      }
+    if (authenticated) {
+      fetchOrders();
+      return;
     }
 
-    fetchOrders();
+    setLoading(false);
   }, []);
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoginError('');
+    setIsLoggingIn(true);
+
+    try {
+      await pb.admins.authWithPassword(email.trim(), password);
+      setIsAuthenticated(true);
+      await fetchOrders();
+    } catch (error) {
+      console.error('PocketBase admin login failed:', error);
+      setLoginError('A PocketBase admin bejelentkezés sikertelen. Ellenőrizd az e-mailt és a jelszót.');
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    pb.authStore.clear();
+    setIsAuthenticated(false);
+    setOrders([]);
+    setSearch('');
+    setPassword('');
+  };
 
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -83,6 +124,72 @@ export default function AdminPage() {
     });
   }, [orders, search]);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#f7f4ed] text-[#27251f]">
+        <Header />
+
+        <main className="mx-auto flex max-w-xl items-center justify-center px-6 py-16 sm:px-10 lg:px-16">
+          <div className="w-full rounded-[30px] border border-[#e3ded3] bg-white p-8 shadow-[0_18px_40px_rgba(35,28,21,0.06)] sm:p-10">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#efe7db] text-[#473f36]">
+                <LockKeyhole className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">
+                  PocketBase admin
+                </p>
+                <h1 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">
+                  Bejelentkezés
+                </h1>
+              </div>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Admin e-mail</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="admin@zsulportekai.hu"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none placeholder:text-[#9a9388] focus:border-[#2d2922]"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Jelszó</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none placeholder:text-[#9a9388] focus:border-[#2d2922]"
+                  required
+                />
+              </label>
+
+              {loginError && (
+                <div className="rounded-2xl border border-[#f1c7b8] bg-[#fff1ec] px-4 py-3 text-sm text-[#8e4a2d]">
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-[#2d2922] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#1e1b18] disabled:cursor-not-allowed disabled:bg-[#a49d93]"
+              >
+                {isLoggingIn ? 'Bejelentkezés...' : 'Bejelentkezés a PocketBase adminba'}
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-[#27251f]">
       <Header />
@@ -103,14 +210,25 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-[#e2dccf] bg-white px-4 py-3 shadow-sm">
-            <Search className="h-4 w-4 text-[#726b62]" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Keresés név, e-mail, azonosító..."
-              className="w-full bg-transparent text-sm text-[#2d2922] outline-none placeholder:text-[#9a9388]"
-            />
+          <div className="flex w-full max-w-xl items-center justify-end gap-3">
+            <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-[#e2dccf] bg-white px-4 py-3 shadow-sm">
+              <Search className="h-4 w-4 text-[#726b62]" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Keresés név, e-mail, azonosító..."
+                className="w-full bg-transparent text-sm text-[#2d2922] outline-none placeholder:text-[#9a9388]"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-full border border-[#ddd0c0] bg-white px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#2d2922] transition hover:border-[#a35e29] hover:bg-[#f5efe4]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Kijelentkezés
+            </button>
           </div>
         </div>
 

@@ -24,6 +24,8 @@ const navigation = [
   { label: 'Vélemények', href: '#reviews', icon: Star },
 ];
 
+const adminLink = { label: 'Admin', href: '/admin' };
+
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
@@ -99,6 +101,12 @@ export default function Header() {
                 <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-[#a35e29] transition-all duration-300 ease-out group-hover:w-full" />
               </a>
             ))}
+            <a
+              href={adminLink.href}
+              className="rounded-full border border-[#e2dccf] bg-[#f5efe4] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2d2922] transition hover:border-[#a35e29] hover:bg-[#f1e7d8]"
+            >
+              {adminLink.label}
+            </a>
           </nav>
 
           {/* Kosár és mobil menü gombok */}

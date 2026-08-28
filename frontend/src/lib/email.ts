@@ -1,6 +1,8 @@
 export type OrderEmailInput = {
   id?: string;
   customer_name?: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
   customer_email?: string;
   delivery_method?: 'foxpost' | 'home_delivery';
   payment_method?: 'bank_transfer' | 'stripe';
@@ -50,6 +52,9 @@ export async function sendOrderEmails(order: OrderEmailInput) {
   const items = Array.isArray(order.items) ? order.items : [];
   const deliveryLine = buildDeliveryText(order);
   const paymentLabel = order.payment_method === 'stripe' ? 'Online fizetés' : 'Banki átutalás';
+  const customerDisplayName = [order.customer_first_name, order.customer_last_name, order.customer_name]
+    .filter((value): value is string => Boolean(value && value.trim()))
+    .join(' ') || 'N/A';
 
   const customerHtml = `
     <div style="font-family: Arial, sans-serif; color: #201d1a; line-height: 1.6;">
@@ -72,7 +77,7 @@ export async function sendOrderEmails(order: OrderEmailInput) {
   const customerText = [
     'Köszönjük a megrendelést!',
     `Megrendelés azonosító: #${orderId}`,
-    `Vevő: ${order.customer_name ?? 'N/A'}`,
+    `Vevő: ${customerDisplayName}`,
     `Fizetési mód: ${paymentLabel}`,
     `Szállítás: ${deliveryLine}`,
     `Rendelés tartalma: ${items.map((item) => `${item.title ?? 'Termék'} x ${item.quantity ?? 1}`).join(', ') || 'Nincs megadva'}`,
@@ -85,7 +90,7 @@ export async function sendOrderEmails(order: OrderEmailInput) {
     <div style="font-family: Arial, sans-serif; color: #201d1a; line-height: 1.6;">
       <h2 style="margin-bottom: 12px; color: #2d2922;">Új megrendelés érkezett</h2>
       <p><strong>Megrendelés azonosító:</strong> #${orderId}</p>
-      <p><strong>Vevő:</strong> ${order.customer_name ?? 'N/A'}</p>
+      <p><strong>Vevő:</strong> ${customerDisplayName}</p>
       <p><strong>E-mail:</strong> ${order.customer_email ?? 'N/A'}</p>
       <p><strong>Fizetési mód:</strong> ${paymentLabel}</p>
       <p><strong>Szállítási mód:</strong> ${order.delivery_method === 'foxpost' ? 'Foxpost automata' : 'Házhozszállítás'}</p>

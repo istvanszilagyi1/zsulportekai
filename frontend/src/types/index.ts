@@ -16,6 +16,8 @@ export type PaymentMethod = 'bank_transfer' | 'stripe';
 
 export interface OrderPayload {
   customer_name: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
   customer_email: string;
   customer_phone: string;
   delivery_method: 'foxpost' | 'home_delivery';

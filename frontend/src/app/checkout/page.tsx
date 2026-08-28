@@ -87,7 +87,8 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('bank_transfer');
   const [foxpostSelection, setFoxpostSelection] = useState<FoxpostSelection | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     city: '',
@@ -121,8 +122,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
-      setError('Kérjük, add meg a vevő adatait.');
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.phone.trim()) {
+      setError('Kérjük, add meg a vevő vezeték- és keresztnévét, e-mail címét és telefonszámát.');
       return;
     }
 
@@ -151,8 +152,14 @@ export default function CheckoutPage() {
 
     try {
       const isPaid = paymentMethod === 'stripe';
+      const customerFirstName = formData.firstName.trim();
+      const customerLastName = formData.lastName.trim();
+      const customerName = [customerFirstName, customerLastName].filter(Boolean).join(' ');
+
       const payload = {
-        customer_name: formData.name.trim(),
+        customer_name: customerName,
+        customer_first_name: customerFirstName,
+        customer_last_name: customerLastName,
         customer_email: formData.email.trim(),
         customer_phone: formData.phone.trim(),
         delivery_method: deliveryMethod,
@@ -269,14 +276,27 @@ export default function CheckoutPage() {
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <label className="flex flex-col gap-2 sm:col-span-2">
-                  <span className="text-sm font-medium text-[#4c453d]">Név</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-[#4c453d]">Vezetéknév</span>
                   <div className="relative">
                     <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f867b]" />
                     <input
-                      value={formData.name}
-                      onChange={(event) => updateField('name', event.target.value)}
-                      placeholder="Példa Béla"
+                      value={formData.lastName}
+                      onChange={(event) => updateField('lastName', event.target.value)}
+                      placeholder="Példa"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] py-3 pl-10 pr-4 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </div>
+                </label>
+
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-[#4c453d]">Keresztnév</span>
+                  <div className="relative">
+                    <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f867b]" />
+                    <input
+                      value={formData.firstName}
+                      onChange={(event) => updateField('firstName', event.target.value)}
+                      placeholder="Béla"
                       className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] py-3 pl-10 pr-4 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
                     />
                   </div>

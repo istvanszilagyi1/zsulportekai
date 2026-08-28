@@ -12,8 +12,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Hiányzó adatok a rendeléshez.' }, { status: 400 });
     }
 
+    const customerFirstName = body.customer_first_name ? String(body.customer_first_name).trim() : '';
+    const customerLastName = body.customer_last_name ? String(body.customer_last_name).trim() : '';
+    const customerName = String(body.customer_name ?? [customerFirstName, customerLastName].filter(Boolean).join(' ')).trim();
+
     const orderPayload = {
-      customer_name: String(body.customer_name).trim(),
+      customer_name: customerName,
+      customer_first_name: customerFirstName,
+      customer_last_name: customerLastName,
       customer_email: String(body.customer_email).trim(),
       customer_phone: String(body.customer_phone).trim(),
       delivery_method: body.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
@@ -38,6 +44,8 @@ export async function POST(request: Request) {
     const emailPayload = {
       id: String(createdOrder.id),
       customer_name: orderPayload.customer_name,
+      customer_first_name: orderPayload.customer_first_name,
+      customer_last_name: orderPayload.customer_last_name,
       customer_email: orderPayload.customer_email,
       delivery_method: orderPayload.delivery_method as 'foxpost' | 'home_delivery',
       payment_method: orderPayload.payment_method as 'bank_transfer' | 'stripe',

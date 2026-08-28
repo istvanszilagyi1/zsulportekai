@@ -60,6 +60,8 @@ type EmailLogEntry = {
   type: 'customer' | 'admin' | 'invoice';
   sentAt: string;
   subject: string;
+  body: string;
+  from?: string;
 };
 
 const ORDER_STATUS_OPTIONS: OrderStatus[] = [
@@ -190,6 +192,11 @@ export default function AdminPage() {
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'email-log'>('orders');
   const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
+  const [replySubject, setReplySubject] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -255,6 +262,8 @@ export default function AdminPage() {
           type: 'customer',
           sentAt: order.created ?? new Date().toISOString(),
           subject: 'Rendelés visszaigazolás',
+          body: `Kedves ${customerName}!\n\nA rendelésedet rögzítettük a Zsül Portékái webshopban.\n\nMegrendelés azonosító: #${order.id}\nÖsszeg: ${fmtMoney(order.total_price)}\n\nÜdvözlettel:\nZsül Portékái`,
+          from: 'Zsül Portékái',
         },
         {
           id: `${order.id}-admin`,
@@ -264,6 +273,8 @@ export default function AdminPage() {
           type: 'admin',
           sentAt: order.created ?? new Date().toISOString(),
           subject: 'Új rendelés érkezett',
+          body: `Új rendelés érkezett az alábbi adatokkal:\n\nNév: ${customerName}\nE-mail: ${order.customer_email}\nTelefon: ${order.customer_phone}\nÖsszeg: ${fmtMoney(order.total_price)}\nSzállítás: ${order.delivery_method === 'foxpost' ? order.foxpost_place_name ?? 'Foxpost automata' : order.shipping_address ?? 'Házhozszállítás'}`,
+          from: 'Zsül Portékái admin',
         },
       ];
 
@@ -273,9 +284,11 @@ export default function AdminPage() {
           orderId: order.id,
           customerName,
           recipient: order.invoice_email || order.customer_email,
-          type: 'invoice' as const,
+          type: 'invoice',
           sentAt: order.created ?? new Date().toISOString(),
           subject: 'Számla elküldése',
+          body: `Kedves ${customerName}!\n\nA számlához tartozó adatok elküldésre kerültek.\nCégnév: ${order.invoice_company_name ?? 'Nincs megadva'}\nAdószám: ${order.invoice_tax_number ?? 'Nincs megadva'}\nSzámlázási cím: ${order.invoice_address ?? 'Nincs megadva'}\nÖsszeg: ${fmtMoney(order.total_price)}`,
+          from: 'Zsül Portékái számlázás',
         });
       }
 
@@ -420,6 +433,76 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Rendelés módosítása sikertelen:', error);
       window.alert('A rendelés mentése sikertelen volt.');
+    }
+  };
+
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  );
+
+  const selectedOrderEmails = useMemo(
+    () => emailLog.filter((entry) => entry.orderId === selectedOrderId),
+    [emailLog, selectedOrderId],
+  );
+
+  const handleSendCustomerEmail = async () => {
+    if (!selectedOrder || !replyBody.trim()) {
+      window.alert('A vevőnek küldendő üzenet szövege kötelező.');
+      return;
+    }
+
+    setIsSendingReply(true);
+
+    try {
+      const response = await fetch(`/api/orders/${selectedOrder.id}/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: selectedOrder.customer_email,
+          subject: replySubject.trim() || `Üzenet a megrendeléshez (#${selectedOrder.id})`,
+          text: replyBody.trim(),
+          from: 'Zsül Portékái admin',
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'A küldés nem sikerült.');
+      }
+
+      const sentEntry: EmailLogEntry = {
+        id: `${selectedOrder.id}-reply-${Date.now()}`,
+        orderId: selectedOrder.id,
+        customerName: buildFullName(selectedOrder.customer_first_name, selectedOrder.customer_last_name) || selectedOrder.customer_name,
+        recipient: selectedOrder.customer_email,
+        type: 'admin',
+        sentAt: new Date().toISOString(),
+        subject: replySubject.trim() || `Üzenet a megrendeléshez (#${selectedOrder.id})`,
+        body: replyBody.trim(),
+        from: 'Zsül Portékái admin',
+      };
+
+      setEmailLog((current) => {
+        const merged = [sentEntry, ...current];
+        const unique = new Map<string, EmailLogEntry>();
+        merged.forEach((entry) => unique.set(entry.id, entry));
+        const nextEntries = Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+        localStorage.setItem('zsulportekai-email-log', JSON.stringify(nextEntries));
+        return nextEntries.slice(0, 60);
+      });
+
+      setReplySubject('');
+      setReplyBody('');
+      setExpandedEmailId(sentEntry.id);
+      window.alert('Az e-mail elküldve a vevőnek.');
+    } catch (error) {
+      console.error('E-mail küldése a vevőnek sikertelen:', error);
+      window.alert('A vevőnek küldött e-mail elküldése sikertelen volt.');
+    } finally {
+      setIsSendingReply(false);
     }
   };
 
@@ -672,6 +755,104 @@ export default function AdminPage() {
           ))}
         </div>
 
+        {selectedOrder && (
+          <section className="mb-8 rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">Kiválasztott rendelés</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">
+                  #{selectedOrder.id} · {buildFullName(selectedOrder.customer_first_name, selectedOrder.customer_last_name) || selectedOrder.customer_name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOrderId(null)}
+                className="rounded-full border border-[#ddd0c0] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+              >
+                Bezárás
+              </button>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="space-y-3">
+                {selectedOrderEmails.length === 0 ? (
+                  <div className="rounded-[20px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-5 text-sm text-[#5d564f]">
+                    Még nincs elküldött e-mail ehhez a rendeléshez.
+                  </div>
+                ) : (
+                  selectedOrderEmails.map((entry) => {
+                    const isExpanded = expandedEmailId === entry.id;
+                    return (
+                      <div key={entry.id} className="rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="text-sm font-semibold text-[#2d2922]">{entry.subject}</div>
+                            <div className="mt-1 text-xs text-[#5d564f]">
+                              {entry.type === 'customer' ? 'Vevői' : entry.type === 'admin' ? 'Admin' : 'Számla'} · {entry.recipient}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedEmailId(isExpanded ? null : entry.id)}
+                            className="rounded-full border border-[#ddd0c0] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+                          >
+                            {isExpanded ? 'Bezárás' : 'Megnyitás'}
+                          </button>
+                        </div>
+                        <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-[#7a6d5f]">
+                          {new Date(entry.sentAt).toLocaleString('hu-HU')}
+                        </div>
+                        {isExpanded && (
+                          <div className="mt-4 rounded-[16px] border border-[#e8dfd0] bg-white p-4 text-sm leading-6 whitespace-pre-wrap text-[#423d39]">
+                            {entry.body || 'Nincs levél tartalom rögzítve.'}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="rounded-[24px] border border-[#e3ded3] bg-[#faf8f5] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">Vevői válasz</p>
+                <h3 className="mt-2 text-2xl font-medium tracking-[-0.04em] text-[#2d2922]">E-mail küldése</h3>
+
+                <div className="mt-4 space-y-4">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-[#4c453d]">Tárgy</span>
+                    <input
+                      value={replySubject}
+                      onChange={(event) => setReplySubject(event.target.value)}
+                      placeholder="Új információ a rendelésről"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-[#4c453d]">Üzenet</span>
+                    <textarea
+                      value={replyBody}
+                      onChange={(event) => setReplyBody(event.target.value)}
+                      rows={8}
+                      placeholder="Írd meg a vevőnek szóló üzenetet..."
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleSendCustomerEmail}
+                    disabled={isSendingReply}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2d2922] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1e1b18] disabled:cursor-not-allowed disabled:bg-[#a49d93]"
+                  >
+                    {isSendingReply ? 'Küldés...' : 'E-mail küldése a vevőnek'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="overflow-hidden rounded-[28px] border border-[#e3ded3] bg-white shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -762,6 +943,14 @@ export default function AdminPage() {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrderId(order.id)}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#d9d0c2] bg-[#f0f6ff] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#264d9f] hover:border-[#4b7de7]"
+                            >
+                              <MailCheck className="h-3.5 w-3.5" />
+                              E-mailek
+                            </button>
                             <button
                               type="button"
                               onClick={() => setEditingOrder(order)}

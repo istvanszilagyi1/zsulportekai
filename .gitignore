@@ -1,0 +1,8 @@
+# Pocketbase fájlok (adatbázis és futtatható bináris)
+pocketbase/pocketbase
+pocketbase/pb_data/
+
+# Node és Next.js fájlok
+**/node_modules/
+**/.next/
+**/.env.local

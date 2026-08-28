@@ -11,6 +11,7 @@ import {
   Sparkles,
   Star,
   Truck,
+  X,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import { useCart } from '@/context/CartContext';
@@ -169,10 +170,73 @@ function inferProductCategory(value: string): CategoryFilter {
   return 'all';
 }
 
+function decodeHtmlEntities(value: string) {
+  if (!value) return '';
+
+  const entityMap: Record<string, string> = {
+    '&nbsp;': ' ',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&Aacute;': 'Á',
+    '&aacute;': 'á',
+    '&Acirc;': 'Â',
+    '&acirc;': 'â',
+    '&Auml;': 'Ä',
+    '&auml;': 'ä',
+    '&Eacute;': 'É',
+    '&eacute;': 'é',
+    '&Iacute;': 'Í',
+    '&iacute;': 'í',
+    '&Oacute;': 'Ó',
+    '&oacute;': 'ó',
+    '&Ouml;': 'Ö',
+    '&ouml;': 'ö',
+    '&Uacute;': 'Ú',
+    '&uacute;': 'ú',
+    '&Uuml;': 'Ü',
+    '&uuml;': 'ü',
+    '&Oslash;': 'Ø',
+    '&oslash;': 'ø',
+    '&szlig;': 'ß',
+  };
+
+  let decoded = value;
+
+  Object.entries(entityMap).forEach(([entity, replacement]) => {
+    decoded = decoded.split(entity).join(replacement);
+  });
+
+  decoded = decoded.replace(/&#(\d+);/g, (_, code) => {
+    return String.fromCodePoint(Number(code));
+  });
+
+  decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => {
+    return String.fromCodePoint(parseInt(code, 16));
+  });
+
+  if (typeof window !== 'undefined' && 'DOMParser' in window) {
+    const doc = new DOMParser().parseFromString(decoded, 'text/html');
+    const decodedText = doc.documentElement.textContent ?? decoded;
+    if (decodedText.trim()) {
+      decoded = decodedText;
+    }
+  }
+
+  return decoded;
+}
+
 function sanitizeText(value?: string) {
-  return value
-    ? value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-    : 'Kézműves, természetes és gondosan készült termék.';
+  const decoded = decodeHtmlEntities(value ?? '');
+  const cleanText = decoded
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleanText || 'Kézműves, természetes és gondosan készült termék.';
 }
 
 function categoryName(category: CategoryFilter) {
@@ -188,6 +252,11 @@ export default function HomePage() {
     useState<CategoryFilter>('all');
   const [loading, setLoading] = useState(true);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductRecord | null>(
+    null,
+  );
+  const [imageZoom, setImageZoom] = useState(1.25);
+  const [isPixelated, setIsPixelated] = useState(false);
 
   const { addToCart } = useCart();
 
@@ -235,6 +304,18 @@ export default function HomePage() {
     window.setTimeout(() => {
       setAddedId(null);
     }, 1400);
+  };
+
+  const openProductModal = (product: ProductRecord) => {
+    setSelectedProduct(product);
+    setImageZoom(1.25);
+    setIsPixelated(false);
+  };
+
+  const closeProductModal = () => {
+    setSelectedProduct(null);
+    setImageZoom(1.25);
+    setIsPixelated(false);
   };
 
   return (
@@ -385,7 +466,8 @@ export default function HomePage() {
                   return (
                     <article
                       key={product.id}
-                      className={`group ${
+                      onClick={() => openProductModal(product)}
+                      className={`group cursor-pointer ${
                         index % 3 === 1 ? 'sm:translate-y-8 xl:translate-y-10' : ''
                       }`}
                     >
@@ -395,6 +477,10 @@ export default function HomePage() {
                             src={imageUrl}
                             alt={product.title}
                             className="h-full w-full object-contain object-center p-3 transition duration-700 ease-out group-hover:scale-[1.02] sm:p-4"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openProductModal(product);
+                            }}
                           />
                         </div>
 
@@ -407,7 +493,10 @@ export default function HomePage() {
                         <div className="absolute bottom-4 right-4">
                           <button
                             type="button"
-                            onClick={() => handleAddToCart(product)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleAddToCart(product);
+                            }}
                             aria-label={`${product.title} hozzáadása a kosárhoz`}
                             className={`flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition ${
                               isJustAdded
@@ -452,6 +541,142 @@ export default function HomePage() {
             )}
           </div>
         </section>
+
+        {selectedProduct ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1d1914]/75 p-4 backdrop-blur-sm"
+            onClick={closeProductModal}
+          >
+            <div
+              className="relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label={selectedProduct.title}
+            >
+              <button
+                type="button"
+                onClick={closeProductModal}
+                className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-[#f2eee7] text-[#2d2923] shadow-sm transition hover:bg-white"
+                aria-label="Termékablak bezárása"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="bg-[#ece4d8] p-4 sm:p-6">
+                  <div className="overflow-hidden rounded-[22px] border border-[#d9d3c8] bg-[#f4efe9]">
+                    <div className="flex h-[420px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[520px]">
+                      <img
+                        src={
+                          selectedProduct.image
+                            ? getImageUrl(selectedProduct, selectedProduct.image)
+                            : heroImage
+                        }
+                        alt={selectedProduct.title}
+                        className="h-full w-full object-contain transition-transform duration-200 ease-out"
+                        style={{
+                          transform: `scale(${imageZoom})`,
+                          imageRendering: isPixelated ? 'pixelated' : 'auto',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageZoom((zoom) =>
+                          Math.max(1, Number((zoom - 0.2).toFixed(2))),
+                        )
+                      }
+                      className="rounded-full border border-[#d3cabd] bg-white px-3 py-1.5 text-sm font-medium text-[#2d2923] transition hover:border-[#2d2923]"
+                    >
+                      -
+                    </button>
+
+                    <input
+                      type="range"
+                      min="1"
+                      max="2.5"
+                      step="0.05"
+                      value={imageZoom}
+                      onChange={(event) =>
+                        setImageZoom(Number(event.target.value))
+                      }
+                      className="h-2 w-32 accent-[#2d2923]"
+                      aria-label="Kép nagyítása"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageZoom((zoom) =>
+                          Math.min(2.5, Number((zoom + 0.2).toFixed(2))),
+                        )
+                      }
+                      className="rounded-full border border-[#d3cabd] bg-white px-3 py-1.5 text-sm font-medium text-[#2d2923] transition hover:border-[#2d2923]"
+                    >
+                      +
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsPixelated((value) => !value)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] transition ${
+                        isPixelated
+                          ? 'border-[#2d2923] bg-[#2d2923] text-white'
+                          : 'border-[#d3cabd] bg-white text-[#2d2923]'
+                      }`}
+                    >
+                      {isPixelated ? 'Pixelnézet bekapcsolva' : 'Pixelnézet'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
+                    {categoryName(
+                      inferProductCategory(
+                        `${selectedProduct.category ?? ''} ${selectedProduct.title ?? ''} ${selectedProduct.description ?? ''}`,
+                      ),
+                    )}
+                  </p>
+
+                  <h3 className="mt-4 text-3xl font-medium tracking-[-0.04em] text-[#2d2923] sm:text-4xl">
+                    {selectedProduct.title}
+                  </h3>
+
+                  <p className="mt-5 text-2xl font-semibold text-[#2d2923]">
+                    {selectedProduct.price.toLocaleString('hu-HU')} Ft
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAddToCart(selectedProduct);
+                      closeProductModal();
+                    }}
+                    className="mt-6 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#1d1a17]"
+                  >
+                    Kosárba
+                  </button>
+
+                  <div className="mt-8 border-t border-[#d8d0c6] pt-6">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
+                      Leírás
+                    </p>
+
+                    <p className="mt-4 whitespace-pre-line text-base leading-7 text-[#564f46]">
+                      {sanitizeText(selectedProduct.description)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* =========================================================
             INTRO

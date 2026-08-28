@@ -15,11 +15,40 @@ type FoxpostPickerProps = {
 
 const isFoxpostOrigin = (origin: string) => /foxpost\.hu$/i.test(origin) || /foxpost\.hu\b/i.test(origin);
 
-const extractFoxpostValue = (source: Record<string, unknown>, keys: string[]) => {
-  for (const key of keys) {
-    const value = source[key];
-    if (value !== undefined && value !== null && value !== '') {
-      return value;
+const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const extractFoxpostValue = (source: unknown, keys: string[]) => {
+  if (!source || typeof source !== 'object') {
+    return undefined;
+  }
+
+  const normalizedKeys = new Set(keys.map((key) => normalizeKey(key)));
+  const queue: unknown[] = [source];
+  const visited = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object' || visited.has(current)) {
+      continue;
+    }
+
+    visited.add(current);
+
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(current as Record<string, unknown>)) {
+      if (normalizedKeys.has(normalizeKey(key))) {
+        if (value !== undefined && value !== null && value !== '') {
+          return value;
+        }
+      }
+
+      if (value && typeof value === 'object') {
+        queue.push(value);
+      }
     }
   }
 
@@ -42,27 +71,40 @@ export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
         return;
       }
 
-      const nested =
-        (data.place && typeof data.place === 'object' ? (data.place as Record<string, unknown>) : undefined) ??
-        (data.selectedPlace && typeof data.selectedPlace === 'object'
-          ? (data.selectedPlace as Record<string, unknown>)
-          : undefined) ??
-        (data.location && typeof data.location === 'object'
-          ? (data.location as Record<string, unknown>)
-          : undefined) ??
-        {};
+      const payload =
+        (data as Record<string, unknown>).payload ??
+        (data as Record<string, unknown>).selected ??
+        (data as Record<string, unknown>).selection ??
+        (data as Record<string, unknown>).place ??
+        (data as Record<string, unknown>).selectedPlace ??
+        (data as Record<string, unknown>).location ??
+        data;
 
       const rawPlaceId =
-        extractFoxpostValue(data as Record<string, unknown>, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id']) ??
-        extractFoxpostValue(nested, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id']);
+        extractFoxpostValue(payload, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id', 'point_id', 'terminal_id']) ??
+        extractFoxpostValue((data as Record<string, unknown>).place, ['place_id', 'placeId', 'id', 'pickup_id', 'parcel_id', 'point_id', 'terminal_id']);
 
       const rawName =
-        extractFoxpostValue(data as Record<string, unknown>, ['name', 'place_name', 'point_name']) ??
-        extractFoxpostValue(nested, ['name', 'place_name', 'point_name']);
+        extractFoxpostValue(payload, ['name', 'place_name', 'point_name', 'location_name', 'title']) ??
+        extractFoxpostValue((data as Record<string, unknown>).place, ['name', 'place_name', 'point_name', 'location_name', 'title']);
 
       const rawAddress =
-        extractFoxpostValue(data as Record<string, unknown>, ['address', 'full_address', 'addressText']) ??
-        extractFoxpostValue(nested, ['address', 'full_address', 'addressText']);
+        extractFoxpostValue(payload, [
+          'address',
+          'full_address',
+          'addressText',
+          'fullAddress',
+          'address_text',
+          'pickup_address',
+        ]) ??
+        extractFoxpostValue((data as Record<string, unknown>).place, [
+          'address',
+          'full_address',
+          'addressText',
+          'fullAddress',
+          'address_text',
+          'pickup_address',
+        ]);
 
       if (rawPlaceId === undefined || rawName === undefined || rawAddress === undefined) {
         return;
@@ -106,8 +148,9 @@ export default function FoxpostPicker({ onSelect }: FoxpostPickerProps) {
           <iframe
             src="https://cdn.foxpost.hu/apt-finder/v1/app/"
             title="Foxpost automata kiválasztó"
-            className="h-[420px] w-full border-0 bg-white"
+            className="h-[520px] w-full border-0 bg-white sm:h-[620px]"
             loading="lazy"
+            allow="clipboard-write"
           />
         </div>
       )}

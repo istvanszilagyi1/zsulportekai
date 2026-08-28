@@ -20,8 +20,22 @@ import {
 import Header from '@/components/Header';
 import FoxpostPicker, { type FoxpostSelection } from '@/components/FoxpostPicker';
 import { useCart } from '@/context/CartContext';
-import { pb } from '@/lib/pocketbase';
+import { getImageUrl, pb } from '@/lib/pocketbase';
 import type { PaymentMethod } from '@/types';
+
+const resolveProductImage = (product: { image?: string | null } | null, fallback = '/placeholder.png') => {
+  if (!product?.image) return fallback;
+
+  if (typeof product.image === 'string' && /^https?:\/\//.test(product.image)) {
+    return product.image;
+  }
+
+  if (typeof product.image === 'string' && product.image.startsWith('data:')) {
+    return product.image;
+  }
+
+  return getImageUrl(product, product.image);
+};
 
 type DeliveryMethod = 'foxpost' | 'home_delivery';
 
@@ -524,11 +538,11 @@ export default function CheckoutPage() {
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#efe7db]">
                         <img
-                          src={product.image || '/placeholder.png'}
+                          src={resolveProductImage(product, '/placeholder.png')}
                           alt={product.title}
                           className="h-full w-full object-cover"
                           onError={(event) => {
-                            event.currentTarget.src = 'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
+                            event.currentTarget.src = '/placeholder.png';
                           }}
                         />
                       </div>

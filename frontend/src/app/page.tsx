@@ -506,7 +506,7 @@ export default function HomePage() {
                 </button>
               </div>
             ) : (
-              <div className="grid gap-x-6 gap-y-16 sm:grid-cols-2">
+              <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
                 {visibleProducts.map((product, index) => {
                   const imageUrl = product.image
                     ? getImageUrl(product, product.image)
@@ -524,61 +524,61 @@ export default function HomePage() {
                     <article
                       key={product.id}
                       className={`group ${
-                        index % 3 === 1 ? 'sm:translate-y-16' : ''
+                        index % 3 === 1 ? 'sm:translate-y-8 xl:translate-y-10' : ''
                       }`}
                     >
-                      <div className="relative overflow-hidden bg-[#e5e0d6]">
-                        <div className="aspect-[4/5]">
+                      <div className="relative overflow-hidden rounded-[22px] bg-[#e5e0d6] shadow-[0_10px_22px_rgba(38,30,22,0.05)]">
+                        <div className="aspect-[5/6] overflow-hidden">
                           <img
                             src={imageUrl}
                             alt={product.title}
-                            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.035]"
+                            className="h-full w-full object-cover object-center transition duration-700 ease-out group-hover:scale-[1.04]"
                           />
                         </div>
 
-                        <div className="absolute left-5 top-5">
-                          <span className="bg-[#f7f4ed]/90 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-[#4c483f] backdrop-blur-sm">
+                        <div className="absolute left-4 top-4">
+                          <span className="bg-[#f7f4ed]/90 px-2.5 py-1.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[#4c483f] backdrop-blur-sm">
                             {categoryName(category)}
                           </span>
                         </div>
 
-                        <div className="absolute bottom-5 right-5">
+                        <div className="absolute bottom-4 right-4">
                           <button
                             type="button"
                             onClick={() => handleAddToCart(product)}
                             aria-label={`${product.title} hozzáadása a kosárhoz`}
-                            className={`flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition ${
+                            className={`flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition ${
                               isJustAdded
                                 ? 'bg-[#506b4d] text-white'
                                 : 'bg-white text-[#28251f] hover:scale-105'
                             }`}
                           >
                             {isJustAdded ? (
-                              <Check className="h-5 w-5" />
+                              <Check className="h-4 w-4" />
                             ) : (
-                              <Plus className="h-5 w-5" />
+                              <Plus className="h-4 w-4" />
                             )}
                           </button>
                         </div>
                       </div>
 
-                      <div className="flex items-start justify-between gap-6 pt-5">
-                        <div className="max-w-md">
-                          <h3 className="text-xl font-medium tracking-[-0.025em] text-[#2c2923] sm:text-2xl">
+                      <div className="flex items-start justify-between gap-4 pt-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-medium tracking-[-0.025em] text-[#2c2923] sm:text-xl">
                             {product.title}
                           </h3>
 
-                          <p className="mt-2 max-w-sm text-sm leading-6 text-[#777166]">
+                          <p className="mt-2 text-sm leading-5 text-[#777166]">
                             {sanitizeText(product.description)}
                           </p>
                         </div>
 
                         <div className="shrink-0 text-right">
-                          <p className="text-base font-semibold text-[#2c2923]">
+                          <p className="text-sm font-semibold text-[#2c2923] sm:text-base">
                             {product.price.toLocaleString('hu-HU')} Ft
                           </p>
 
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[#999286]">
+                          <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[#999286]">
                             {categoryName(category)}
                           </p>
                         </div>

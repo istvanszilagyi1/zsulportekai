@@ -4,21 +4,22 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  Home,
-  Info,
+  Heart,
+  Leaf,
   Menu,
-  NotebookText,
   Package,
   ShoppingBag,
+  Sparkles,
+  Star,
   X,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 const navigation = [
-  { label: 'Főoldal', href: '/', icon: Home },
-  { label: 'Portékák', href: '/#products', icon: Package },
-  { label: 'Rólunk', href: '/#about', icon: Info },
-  { label: 'Blog', href: '/#blog', icon: NotebookText },
+  { label: 'Portékáink', href: '#products', icon: Package },
+  { label: 'A Manufaktúráról', href: '#about', icon: Heart },
+  { label: 'Hogyan készül?', href: '#story', icon: Leaf },
+  { label: 'Vélemények', href: '#reviews', icon: Star },
 ];
 
 const logoUrl =
@@ -46,7 +47,7 @@ export default function Header() {
 
         <nav className="hidden items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 p-1 shadow-sm md:flex">
           {navigation.map(({ label, href, icon: Icon }) => (
-            <Link
+            <a
               key={label}
               href={href}
               className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-3.5 py-2 text-sm font-medium text-neutral-600 transition-all duration-300 hover:text-neutral-900"
@@ -54,7 +55,7 @@ export default function Header() {
               <span className="absolute inset-0 -z-10 scale-0 rounded-full bg-white transition-transform duration-300 group-hover:scale-100" />
               <Icon className="h-4 w-4" />
               <span>{label}</span>
-            </Link>
+            </a>
           ))}
         </nav>
 
@@ -68,8 +69,8 @@ export default function Header() {
             {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
 
-          <Link
-            href="/checkout"
+          <a
+            href="#products"
             aria-label="Kosár"
             className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-neutral-900 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-neutral-800"
           >
@@ -79,7 +80,7 @@ export default function Header() {
                 {totalItems}
               </span>
             )}
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -87,7 +88,7 @@ export default function Header() {
         <div className="border-t border-neutral-200 bg-white md:hidden">
           <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
             {navigation.map(({ label, href, icon: Icon }) => (
-              <Link
+              <a
                 key={label}
                 href={href}
                 onClick={() => setIsOpen(false)}
@@ -95,7 +96,7 @@ export default function Header() {
               >
                 <Icon className="h-4 w-4" />
                 {label}
-              </Link>
+              </a>
             ))}
           </nav>
         </div>

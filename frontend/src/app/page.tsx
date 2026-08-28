@@ -28,16 +28,22 @@ const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
 const heroImage =
-  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000192-fa333fa336/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20hidegen%20sajtolt%20olaj.webp?ph=4e95f92e87';
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000039-d6411d6413/DSC02127-5.webp?ph=4e95f92e87';
 
 const sunflowerImage =
-  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000201-4458344586/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20napraforg%C3%B3.webp?ph=4e95f92e87';
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000070-d6a59d6a5b/450/611162499_122246153336090690_8722529316535153812_n.webp?ph=4e95f92e87';
 
 const syrupImage =
-  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000203-7bf1c7bf1e/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20sz%C3%B6rp.webp?ph=4e95f92e87';
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000192-8c9068c908/zsulportekai-2026-majus-22-ami-a-vasarban-lathatatlan.jpg.webp?ph=4e95f92e87';
 
 const flourImage =
-  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000202-6029560298/700/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20liszt.webp?ph=4e95f92e87';
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000188-85ac385ac5/zsulportekai-2026-aprilis-17-napi-szosszenet-nalunk.jpg.webp?ph=4e95f92e87';
+
+const storyImage =
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000186-8429584296/zsulportekai-2026-aprilis-napraforgo-vetes-elott.jpg.webp?ph=4e95f92e87';
+
+const recipeImage =
+  'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000156-8e5ba8e5bc/zsulportekai-2025-december-16-kedvenc-kalacs-receptem.jpg.webp?ph=4e95f92e87';
 
 const categoryLabels: Record<CategoryFilter, string> = {
   all: 'Minden termék',
@@ -314,7 +320,7 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-[1500px] gap-4 lg:grid-cols-12">
             <div className="group relative min-h-[520px] overflow-hidden lg:col-span-7 lg:min-h-[720px]">
               <img
-                src={sunflowerImage}
+                src={storyImage}
                 alt="Napraforgó és magvak"
                 className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
               />
@@ -335,7 +341,7 @@ export default function HomePage() {
             <div className="grid gap-4 lg:col-span-5 lg:grid-rows-[1fr_auto]">
               <div className="group relative min-h-[380px] overflow-hidden lg:min-h-0">
                 <img
-                  src={flourImage}
+                  src={recipeImage}
                   alt="Tönkölybúza és liszt"
                   className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                 />

@@ -1057,13 +1057,7 @@ export default function HomePage() {
         <section className="relative overflow-hidden bg-[#d8d0c0]">
           <div className="mx-auto grid max-w-[1500px] lg:grid-cols-2">
             <div className="flex min-h-[580px] flex-col justify-between p-8 sm:p-12 lg:min-h-[680px] lg:p-16 xl:p-20">
-              <div className="flex items-center justify-between">
-                <img
-                  src={logoUrl}
-                  alt="Zsül Portékái"
-                  className="h-12 w-auto max-w-[200px] object-contain mix-blend-multiply"
-                />
-
+              <div className="flex items-center justify-end">
                 <p className="text-[10px] uppercase tracking-[0.25em] text-[#716a5c]">
                   06 — Kezdjük itt
                 </p>
@@ -1111,24 +1105,24 @@ export default function HomePage() {
       ========================================================== */}
       <footer className="bg-[#24221d] px-6 py-14 text-[#f4f0e7] sm:px-10 lg:px-16 lg:py-20">
         <div className="mx-auto max-w-[1250px]">
-          <div className="grid gap-12 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
+          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.9fr_1fr] lg:gap-12">
             <div>
-              <div className="inline-flex items-center justify-start">
+              <div className="inline-flex items-center justify-start rounded-full border border-white/10 bg-white/3 px-3 py-2">
                 <img
                   src={logoUrl}
                   alt="Zsül Portékái logó"
-                  className="h-14 w-auto max-w-[220px] object-contain"
+                  className="h-12 w-auto max-w-[200px] object-contain"
                 />
               </div>
 
-              <p className="mt-7 max-w-sm text-sm leading-7 text-white/50">
+              <p className="mt-6 max-w-sm text-sm leading-7 text-white/55">
                 A hajdúböszörményi családi manufaktúra, ahol természetes
                 alapanyagokból és hagyományos készítési módokból születnek a
                 tiszta ízek.
               </p>
             </div>
 
-            <div>
+            <div className="lg:pl-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
                 Kapcsolat:
               </p>

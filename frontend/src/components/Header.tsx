@@ -294,13 +294,13 @@ export default function Header() {
                 onClick={clearCart}
                 className="rounded-lg border border-[#ded7ca] bg-white px-3 py-2.5 text-xs font-medium text-[#5e574c] transition hover:bg-[#f0e9dc]"
               >
-                Ürítés
+                Kosár ürítése
               </button>
               <a
                 href="/checkout"
                 className="flex flex-1 items-center justify-center rounded-lg bg-[#2d2922] px-4 py-2.5 text-xs font-bold tracking-wider text-white transition hover:bg-[#1a1814]"
               >
-                Pénztár & Foxpost átvétel →
+                Tovább
               </a>
             </div>
           </div>

@@ -20,6 +20,20 @@ import { pb } from '@/lib/pocketbase';
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
+const normalizeOrderStatus = (order: Partial<OrderRecord>): Pick<OrderRecord, 'status' | 'payment_status'> => {
+  const status = getOrderStatusValue((order as OrderRecord) ?? { status: 'pending', payment_status: 'pending' });
+  const paymentStatus: PaymentStatus = order.payment_status === 'refunded'
+    ? 'refunded'
+    : ['paid', 'processing', 'completed'].includes(status)
+      ? 'paid'
+      : 'pending';
+
+  return {
+    status,
+    payment_status: paymentStatus,
+  };
+};
+
 type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'cancelled' | 'refunded';
 type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
@@ -202,16 +216,22 @@ export default function AdminPage() {
         sort: '-created',
       });
 
-      const normalized = (records as unknown as OrderRecord[]).map((order) => {
+      const normalized: OrderRecord[] = (records as unknown as OrderRecord[]).map((order) => {
         const status = getOrderStatusValue(order);
         const derivedNames = splitCustomerName(order.customer_name);
+        const nextPaymentStatus: PaymentStatus = order.payment_status === 'refunded'
+          ? 'refunded'
+          : order.payment_status === 'paid' || status === 'paid' || status === 'processing' || status === 'completed'
+            ? 'paid'
+            : 'pending';
+
         return {
           ...order,
           customer_first_name: order.customer_first_name ?? derivedNames.firstName,
           customer_last_name: order.customer_last_name ?? derivedNames.lastName,
           customer_name: buildFullName(order.customer_first_name ?? derivedNames.firstName, order.customer_last_name ?? derivedNames.lastName) || order.customer_name,
           status,
-          payment_status: order.payment_status ?? derivePaymentStatus(status),
+          payment_status: nextPaymentStatus,
         };
       });
 
@@ -347,7 +367,13 @@ export default function AdminPage() {
         payment_status: nextPaymentStatus,
       });
 
-      setOrders((current) => current.map((order) => (order.id === orderId ? updatedOrder : order)));
+      setOrders((current) =>
+        current.map((order) => (order.id === orderId ? { ...order, ...updatedOrder, status: nextStatus, payment_status: nextPaymentStatus } : order)),
+      );
+
+      if (editingOrder?.id === orderId) {
+        setEditingOrder((current) => (current ? { ...current, status: nextStatus, payment_status: nextPaymentStatus } : current));
+      }
     } catch (error) {
       console.error('Rendelés állapot frissítése sikertelen:', error);
     } finally {
@@ -390,14 +416,16 @@ export default function AdminPage() {
         editingOrder.customer_last_name ?? splitCustomerName(editingOrder.customer_name).lastName,
       );
 
+      const normalizedStatus = normalizeOrderStatus(editingOrder);
+
       const payload = {
         customer_name: nextCustomerName || editingOrder.customer_name,
         customer_email: editingOrder.customer_email,
         customer_phone: editingOrder.customer_phone,
         delivery_method: editingOrder.delivery_method,
         payment_method: editingOrder.payment_method,
-        payment_status: editingOrder.payment_status,
-        status: editingOrder.status,
+        payment_status: editingOrder.payment_status || normalizedStatus.payment_status,
+        status: editingOrder.status || normalizedStatus.status,
         total_price: Number(editingOrder.total_price ?? 0),
         foxpost_place_id: editingOrder.foxpost_place_id ?? '',
         foxpost_place_name: editingOrder.foxpost_place_name ?? '',
@@ -423,6 +451,10 @@ export default function AdminPage() {
         status: getOrderStatusValue(updatedOrder),
         payment_status: updatedOrder.payment_status ?? derivePaymentStatus(getOrderStatusValue(updatedOrder)),
       };
+
+      if (editingOrder.status !== normalized.status || editingOrder.payment_status !== normalized.payment_status) {
+        setEditingOrder((current) => (current ? { ...current, status: normalized.status, payment_status: normalized.payment_status } : current));
+      }
 
       setOrders((current) => current.map((order) => (order.id === editingOrder.id ? normalized : order)));
       setEditingOrder(null);

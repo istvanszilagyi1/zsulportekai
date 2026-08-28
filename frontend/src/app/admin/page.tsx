@@ -30,6 +30,8 @@ type PaymentStatus = 'pending' | 'paid' | 'refunded';
 type OrderRecord = {
   id: string;
   customer_name: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
   customer_email: string;
   customer_phone: string;
   delivery_method: 'foxpost' | 'home_delivery';
@@ -48,6 +50,16 @@ type OrderRecord = {
   invoice_address?: string;
   invoice_email?: string;
   created?: string;
+};
+
+type EmailLogEntry = {
+  id: string;
+  orderId: string;
+  customerName: string;
+  recipient: string;
+  type: 'customer' | 'admin' | 'invoice';
+  sentAt: string;
+  subject: string;
 };
 
 const ORDER_STATUS_OPTIONS: OrderStatus[] = [
@@ -119,6 +131,51 @@ const getStatusMeta = (status: OrderStatus) => ({
   className: statusClasses[status],
 });
 
+const splitCustomerName = (rawName?: string) => {
+  const safeValue = (rawName ?? '').trim();
+  if (!safeValue) {
+    return { firstName: '', lastName: '' };
+  }
+
+  const parts = safeValue.split(/\s+/);
+  if (parts.length <= 1) {
+    return { firstName: safeValue, lastName: '' };
+  }
+
+  const lastName = parts.pop() ?? '';
+  return { firstName: parts.join(' '), lastName };
+};
+
+const buildFullName = (firstName?: string, lastName?: string) => {
+  const first = (firstName ?? '').trim();
+  const last = (lastName ?? '').trim();
+
+  if (!first && !last) return '';
+  if (!first) return last;
+  if (!last) return first;
+  return `${first} ${last}`;
+};
+
+const getNextStatusForOrder = (order: OrderRecord): OrderStatus => {
+  const current = getOrderStatusValue(order);
+
+  if (current === 'pending') return 'paid';
+  if (current === 'paid') return 'processing';
+  if (current === 'processing') return 'completed';
+  if (current === 'completed') return 'completed';
+  if (current === 'cancelled' || current === 'refunded') return current;
+  return 'completed';
+};
+
+const getAutoAdvanceLabel = (order: OrderRecord) => {
+  const current = getOrderStatusValue(order);
+
+  if (current === 'pending') return 'Fizetve → feldolgozás';
+  if (current === 'paid') return 'Feldolgozás → teljesítés';
+  if (current === 'processing') return 'Teljesítés → kész';
+  return 'Nincs további automatikus lépés';
+};
+
 export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,6 +188,8 @@ export default function AdminPage() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'email-log'>('orders');
+  const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -142,8 +201,12 @@ export default function AdminPage() {
 
       const normalized = (records as unknown as OrderRecord[]).map((order) => {
         const status = getOrderStatusValue(order);
+        const derivedNames = splitCustomerName(order.customer_name);
         return {
           ...order,
+          customer_first_name: order.customer_first_name ?? derivedNames.firstName,
+          customer_last_name: order.customer_last_name ?? derivedNames.lastName,
+          customer_name: buildFullName(order.customer_first_name ?? derivedNames.firstName, order.customer_last_name ?? derivedNames.lastName) || order.customer_name,
           status,
           payment_status: order.payment_status ?? derivePaymentStatus(status),
         };
@@ -164,11 +227,70 @@ export default function AdminPage() {
 
     if (authenticated) {
       fetchOrders();
+      const savedLog = localStorage.getItem('zsulportekai-email-log');
+      if (savedLog) {
+        try {
+          setEmailLog(JSON.parse(savedLog));
+        } catch {
+          setEmailLog([]);
+        }
+      }
       return;
     }
 
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const generatedLog: EmailLogEntry[] = orders.flatMap((order) => {
+      const customerName = buildFullName(order.customer_first_name, order.customer_last_name) || order.customer_name;
+      const base: EmailLogEntry[] = [
+        {
+          id: `${order.id}-customer`,
+          orderId: order.id,
+          customerName,
+          recipient: order.customer_email,
+          type: 'customer',
+          sentAt: order.created ?? new Date().toISOString(),
+          subject: 'Rendelés visszaigazolás',
+        },
+        {
+          id: `${order.id}-admin`,
+          orderId: order.id,
+          customerName,
+          recipient: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@zsulportekai.hu',
+          type: 'admin',
+          sentAt: order.created ?? new Date().toISOString(),
+          subject: 'Új rendelés érkezett',
+        },
+      ];
+
+      if (order.invoice_required) {
+        base.push({
+          id: `${order.id}-invoice`,
+          orderId: order.id,
+          customerName,
+          recipient: order.invoice_email || order.customer_email,
+          type: 'invoice' as const,
+          sentAt: order.created ?? new Date().toISOString(),
+          subject: 'Számla elküldése',
+        });
+      }
+
+      return base;
+    });
+
+    setEmailLog((previous) => {
+      const merged = [...generatedLog, ...previous];
+      const unique = new Map<string, EmailLogEntry>();
+      merged.forEach((entry) => unique.set(entry.id, entry));
+      const nextEntries = Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+      localStorage.setItem('zsulportekai-email-log', JSON.stringify(nextEntries));
+      return nextEntries.slice(0, 30);
+    });
+  }, [orders, isAuthenticated]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -224,6 +346,12 @@ export default function AdminPage() {
     }
   };
 
+  const handleAutoAdvanceStatus = async (order: OrderRecord) => {
+    const nextStatus = getNextStatusForOrder(order);
+    if (nextStatus === order.status) return;
+    await handleUpdateOrderStatus(order.id, nextStatus);
+  };
+
   const handleDeleteOrder = async (orderId: string) => {
     const order = orders.find((item) => item.id === orderId);
     if (!order) return;
@@ -248,8 +376,13 @@ export default function AdminPage() {
     if (!editingOrder) return;
 
     try {
+      const nextCustomerName = buildFullName(
+        editingOrder.customer_first_name ?? splitCustomerName(editingOrder.customer_name).firstName,
+        editingOrder.customer_last_name ?? splitCustomerName(editingOrder.customer_name).lastName,
+      );
+
       const payload = {
-        customer_name: editingOrder.customer_name,
+        customer_name: nextCustomerName || editingOrder.customer_name,
         customer_email: editingOrder.customer_email,
         customer_phone: editingOrder.customer_phone,
         delivery_method: editingOrder.delivery_method,
@@ -272,6 +405,12 @@ export default function AdminPage() {
       const updatedOrder = updated as unknown as OrderRecord;
       const normalized = {
         ...updatedOrder,
+        customer_first_name: splitCustomerName(updatedOrder.customer_name).firstName,
+        customer_last_name: splitCustomerName(updatedOrder.customer_name).lastName,
+        customer_name: buildFullName(
+          splitCustomerName(updatedOrder.customer_name).firstName,
+          splitCustomerName(updatedOrder.customer_name).lastName,
+        ) || updatedOrder.customer_name,
         status: getOrderStatusValue(updatedOrder),
         payment_status: updatedOrder.payment_status ?? derivePaymentStatus(getOrderStatusValue(updatedOrder)),
       };
@@ -387,6 +526,27 @@ export default function AdminPage() {
       <Header />
 
       <main className="mx-auto max-w-[1280px] px-6 py-10 sm:px-10 lg:px-16 lg:py-14">
+        <div className="mb-6 flex flex-wrap gap-2">
+          {[
+            { key: 'orders', label: 'Rendelések' },
+            { key: 'invoices', label: 'Számlák' },
+            { key: 'email-log', label: 'E-mail log' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'email-log')}
+              className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                activeTab === tab.key
+                  ? 'bg-[#2d2922] text-white'
+                  : 'border border-[#ddd0c0] bg-white text-[#2d2922] hover:border-[#a35e29]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white shadow-sm">
@@ -424,6 +584,8 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {activeTab === 'orders' && (
+          <>
         <section className="mb-8 grid gap-4 md:grid-cols-4">
           <div className="rounded-[24px] border border-[#e3ded3] bg-white p-5 shadow-[0_12px_30px_rgba(35,28,21,0.04)]">
             <div className="flex items-center justify-between">
@@ -616,10 +778,19 @@ export default function AdminPage() {
                               <Delete className="h-3.5 w-3.5" />
                               Törlés
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAutoAdvanceStatus(order)}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#d9d0c2] bg-[#edf5ff] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#264d9f] hover:border-[#4b7de7]"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Auto lépés
+                            </button>
                           </div>
                           <div className="mt-2 text-[11px] text-[#5d564f]">
                             {order.invoice_required ? `Számla: ${order.invoice_company_name || 'cég'}` : 'Nincs számla'}
                           </div>
+                          <div className="mt-1 text-[10px] text-[#6a82b8]">{getAutoAdvanceLabel(order)}</div>
                         </td>
                       </tr>
                     );
@@ -629,6 +800,107 @@ export default function AdminPage() {
             </table>
           </div>
         </section>
+          </>
+        )}
+
+        {activeTab === 'invoices' && (
+          <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">Számlák</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">Számlakezelés</h2>
+              </div>
+              <div className="rounded-full bg-[#f2eadc] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#6b5539]">
+                {orders.filter((order) => order.invoice_required).length} számla
+              </div>
+            </div>
+
+            {orders.filter((order) => order.invoice_required).length === 0 ? (
+              <div className="rounded-[22px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-6 text-sm text-[#5d564f]">
+                Jelenleg nincs számlához kötött rendelés.
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {orders
+                  .filter((order) => order.invoice_required)
+                  .map((order) => (
+                    <div key={order.id} className="rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="text-sm font-semibold text-[#2d2922]">#{order.id}</div>
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusClasses[getOrderStatusValue(order)]}`}>
+                          {scopeStatusLabel[getOrderStatusValue(order)]}
+                        </span>
+                      </div>
+                      <div className="space-y-2 text-sm text-[#4c453d]">
+                        <div>
+                          <span className="font-medium text-[#2d2922]">Cégnév:</span> {order.invoice_company_name || 'Nincs megadva'}
+                        </div>
+                        <div>
+                          <span className="font-medium text-[#2d2922]">Adószám:</span> {order.invoice_tax_number || 'Nincs megadva'}
+                        </div>
+                        <div>
+                          <span className="font-medium text-[#2d2922]">E-mail:</span> {order.invoice_email || order.customer_email}
+                        </div>
+                        <div>
+                          <span className="font-medium text-[#2d2922]">Összeg:</span> {fmtMoney(order.total_price)}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditingOrder(order)}
+                        className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#d9d0c2] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Számla szerkesztése
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'email-log' && (
+          <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">E-mail log</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">Kiküldött értesítések</h2>
+              </div>
+              <div className="rounded-full bg-[#eff8f0] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#2b7a4a]">
+                {emailLog.length} bejegyzés
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {emailLog.length === 0 ? (
+                <div className="rounded-[22px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-6 text-sm text-[#5d564f]">
+                  Még nincs kiküldött e-mail log.
+                </div>
+              ) : (
+                emailLog.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex flex-col gap-2 rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4 md:flex-row md:items-center md:justify-between"
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-[#2d2922]">{entry.subject}</div>
+                      <div className="mt-1 text-xs text-[#5d564f]">
+                        {entry.customerName} · {entry.recipient}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-[#e8f0ff] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2955b1]">
+                        {entry.type === 'customer' ? 'vevő' : entry.type === 'admin' ? 'admin' : 'számla'}
+                      </span>
+                      <span className="text-xs text-[#6b625b]">{new Date(entry.sentAt).toLocaleString('hu-HU')}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
       </main>
 
       {editingOrder && (
@@ -652,15 +924,42 @@ export default function AdminPage() {
             <form onSubmit={handleSaveEdit} className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Név</span>
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Vezetéknév</span>
                   <input
-                    value={editingOrder.customer_name}
-                    onChange={(event) => setEditingOrder({ ...editingOrder, customer_name: event.target.value })}
+                    value={editingOrder.customer_last_name ?? splitCustomerName(editingOrder.customer_name).lastName}
+                    onChange={(event) =>
+                      setEditingOrder({
+                        ...editingOrder,
+                        customer_last_name: event.target.value,
+                        customer_name: buildFullName(
+                          editingOrder.customer_first_name ?? splitCustomerName(editingOrder.customer_name).firstName,
+                          event.target.value,
+                        ),
+                      })
+                    }
                     className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
                   />
                 </label>
 
                 <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#4c453d]">Keresztnév</span>
+                  <input
+                    value={editingOrder.customer_first_name ?? splitCustomerName(editingOrder.customer_name).firstName}
+                    onChange={(event) =>
+                      setEditingOrder({
+                        ...editingOrder,
+                        customer_first_name: event.target.value,
+                        customer_name: buildFullName(
+                          event.target.value,
+                          editingOrder.customer_last_name ?? splitCustomerName(editingOrder.customer_name).lastName,
+                        ),
+                      })
+                    }
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  />
+                </label>
+
+                <label className="block md:col-span-2">
                   <span className="mb-2 block text-sm font-medium text-[#4c453d]">E-mail</span>
                   <input
                     type="email"

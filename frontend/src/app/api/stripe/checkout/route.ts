@@ -54,7 +54,7 @@ export async function POST(request: Request) {
               name: `Zsül Portékái rendelés #${orderId}`,
               description: `${customerName} megrendelése`,
             },
-            unit_amount: amount,
+            unit_amount: Math.round(amount * 100),
           },
           quantity: 1,
         },

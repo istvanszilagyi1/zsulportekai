@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import PocketBase from 'pocketbase';
+import { sendOrderStatusEmail } from '@/lib/email';
 import { stripe } from '@/lib/stripe';
 
 const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090');
@@ -25,11 +26,29 @@ export async function GET(request: Request) {
     const isPaid = session.payment_status === 'paid' || session.status === 'complete';
 
     if (isPaid) {
-      await pb.collection('orders').update(orderId, {
+      const order = await pb.collection('orders').update(orderId, {
         payment_status: 'paid',
         status: 'paid',
         stripe_session_id: session.id,
       });
+
+      await sendOrderStatusEmail(
+        {
+          id: String(order.id),
+          customer_name: order.customer_name,
+          customer_first_name: order.customer_first_name,
+          customer_last_name: order.customer_last_name,
+          customer_email: order.customer_email,
+          delivery_method: order.delivery_method,
+          payment_method: order.payment_method,
+          total_price: Number(order.total_price ?? 0),
+          items: Array.isArray(order.items) ? order.items : [],
+          foxpost_place_name: order.foxpost_place_name,
+          foxpost_place_address: order.foxpost_place_address,
+          shipping_address: order.shipping_address,
+        },
+        'paid',
+      );
     }
 
     return NextResponse.json({ ok: true, paid: isPaid, sessionId: session.id, orderId }, { status: 200 });

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import PocketBase from 'pocketbase';
 import { getStripeCheckoutUrl, stripe } from '@/lib/stripe';
-
-const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090');
+import { updateOrderRecord } from '@/lib/pocketbase';
 
 const parseStripeAmount = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -68,7 +66,7 @@ export async function POST(request: Request) {
       cancel_url: `${allowedOrigin}/checkout?payment_cancelled=1`,
     });
 
-    await pb.collection('orders').update(orderId, {
+    await updateOrderRecord(orderId, {
       payment_status: 'pending',
       status: 'pending',
       stripe_session_id: session.id,

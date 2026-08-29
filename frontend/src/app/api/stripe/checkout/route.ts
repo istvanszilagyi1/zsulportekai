@@ -4,6 +4,19 @@ import { getStripeCheckoutUrl, stripe } from '@/lib/stripe';
 
 const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090');
 
+const parseStripeAmount = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+
+  if (typeof value === 'string') {
+    const normalized = Number(value.replace(/[^\d.-]/g, ''));
+    return Number.isFinite(normalized) ? Math.round(normalized) : 0;
+  }
+
+  return 0;
+};
+
 export async function POST(request: Request) {
   try {
     if (!stripe) {
@@ -15,12 +28,11 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const orderId = String(body?.orderId || '').trim();
-    const cleanAmount = typeof body?.amount === 'number' ? body.amount : Number(String(body?.amount ?? 0).replace(/[^\d.-]/g, ''));
-    const amount = Number.isFinite(cleanAmount) ? Math.round(cleanAmount) : 0;
+    const amount = parseStripeAmount(body?.amount);
     const customerEmail = String(body?.customerEmail || '').trim();
     const customerName = String(body?.customerName || 'Vásárló').trim() || 'Vásárló';
 
-    if (!orderId || !Number.isFinite(amount) || amount <= 0) {
+    if (!orderId || amount <= 0) {
       return NextResponse.json({ error: 'Érvénytelen rendelés vagy összeg a Stripe fizetéshez.' }, { status: 400 });
     }
 

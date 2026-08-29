@@ -105,7 +105,7 @@ export default function CheckoutPage() {
 
   const shippingCost = 0;
 
-  const orderTotal = useMemo(() => totalPrice + shippingCost, [totalPrice]);
+  const orderTotal = useMemo(() => Math.round(totalPrice + shippingCost), [totalPrice]);
 
   const updateField = (field: keyof typeof formData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -173,7 +173,7 @@ export default function CheckoutPage() {
         items: cart.map(({ product, quantity }) => ({
           id: product.id,
           title: product.title,
-          price: product.price,
+          price: Number(product.price ?? 0),
           quantity,
         })),
         total_price: orderTotal,
@@ -217,7 +217,7 @@ export default function CheckoutPage() {
           },
           body: JSON.stringify({
             orderId: createdOrder.id,
-            amount: Math.round(Number(orderTotal) || 0),
+            amount: orderTotal,
             customerEmail: formData.email.trim(),
             customerName: customerName,
           }),

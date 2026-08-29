@@ -71,11 +71,16 @@ const buildDeliveryText = (order: OrderEmailInput) => {
   return `Házhozszállítás: ${order.shipping_address ?? 'A cím megadása folyamatban van.'}`;
 };
 
-const getCustomerDisplayName = (order: OrderEmailInput) => [
-  order.customer_first_name,
-  order.customer_last_name,
-  order.customer_name,
-].filter((value): value is string => Boolean(value && value.trim())).join(' ') || 'N/A';
+const getCustomerDisplayName = (order: OrderEmailInput) => {
+  const firstName = (order.customer_first_name ?? '').trim();
+  const lastName = (order.customer_last_name ?? '').trim();
+
+  if (firstName || lastName) {
+    return [firstName, lastName].filter(Boolean).join(' ') || 'N/A';
+  }
+
+  return (order.customer_name ?? '').trim() || 'N/A';
+};
 
 const renderEmailLayout = ({
   title,

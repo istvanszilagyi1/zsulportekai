@@ -15,7 +15,8 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const orderId = String(body?.orderId || '').trim();
-    const amount = Number(body?.amount ?? 0);
+    const rawAmount = Number(String(body?.amount ?? 0).replace(/[^\d.-]/g, ''));
+    const amount = Number.isFinite(rawAmount) ? Math.max(1, Math.round(rawAmount)) : 0;
     const customerEmail = String(body?.customerEmail || '').trim();
     const customerName = String(body?.customerName || 'Vásárló').trim() || 'Vásárló';
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
               name: `Zsül Portékái rendelés #${orderId}`,
               description: `${customerName} megrendelése`,
             },
-            unit_amount: Math.round(amount),
+            unit_amount: amount,
           },
           quantity: 1,
         },

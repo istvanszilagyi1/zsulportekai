@@ -16,12 +16,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     const orderId = String(body?.orderId || '').trim();
     const rawAmount = Number(String(body?.amount ?? 0).replace(/[^\d.-]/g, ''));
-    const amount = Number.isFinite(rawAmount) ? Math.max(1, Math.round(rawAmount)) : 0;
+    const amount = Number.isFinite(rawAmount) ? Math.round(rawAmount) : 0;
     const customerEmail = String(body?.customerEmail || '').trim();
     const customerName = String(body?.customerName || 'Vásárló').trim() || 'Vásárló';
 
     if (!orderId || !Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: 'Érvénytelen rendelés vagy összeg a Stripe fizetéshez.' }, { status: 400 });
+    }
+
+    if (amount < 175) {
+      return NextResponse.json(
+        { error: `A Stripe fizetéshez minimum 175 Ft szükséges. A jelenlegi összeg: ${amount} Ft.` },
+        { status: 400 },
+      );
     }
 
     const allowedOrigin = getStripeCheckoutUrl();

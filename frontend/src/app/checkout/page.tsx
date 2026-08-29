@@ -217,7 +217,7 @@ export default function CheckoutPage() {
           },
           body: JSON.stringify({
             orderId: createdOrder.id,
-            amount: orderTotal,
+            amount: Math.round(Number(orderTotal) || 0),
             customerEmail: formData.email.trim(),
             customerName: customerName,
           }),

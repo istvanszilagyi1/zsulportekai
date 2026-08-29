@@ -15,8 +15,8 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const orderId = String(body?.orderId || '').trim();
-    const rawAmount = Number(String(body?.amount ?? 0).replace(/[^\d.-]/g, ''));
-    const amount = Number.isFinite(rawAmount) ? Math.round(rawAmount) : 0;
+    const cleanAmount = typeof body?.amount === 'number' ? body.amount : Number(String(body?.amount ?? 0).replace(/[^\d.-]/g, ''));
+    const amount = Number.isFinite(cleanAmount) ? Math.round(cleanAmount) : 0;
     const customerEmail = String(body?.customerEmail || '').trim();
     const customerName = String(body?.customerName || 'Vásárló').trim() || 'Vásárló';
 

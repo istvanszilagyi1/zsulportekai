@@ -626,11 +626,11 @@ export default function HomePage() {
 
         {selectedProduct ? (
           <div
-            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#1d1914]/75 p-3 sm:p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1d1914]/75 p-2 sm:p-4 backdrop-blur-sm"
             onClick={closeProductModal}
           >
             <div
-              className="relative my-4 flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
+              className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)] sm:rounded-[28px]"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -646,9 +646,9 @@ export default function HomePage() {
               </button>
 
               <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="bg-[#ece4d8] p-4 sm:p-6">
-                  <div className="overflow-hidden rounded-[22px] border border-[#d9d3c8] bg-[#f4efe9]">
-                    <div className="flex h-[300px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[420px] lg:h-[520px]">
+                <div className="bg-[#ece4d8] p-3 sm:p-6">
+                  <div className="overflow-hidden rounded-[20px] border border-[#d9d3c8] bg-[#f4efe9] sm:rounded-[22px]">
+                    <div className="flex h-[220px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[320px] lg:h-[520px]">
                       <img
                         src={
                           selectedProduct.image
@@ -662,17 +662,17 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-col justify-center overflow-hidden p-5 sm:p-8 lg:p-10">
+                <div className="flex min-h-0 flex-col justify-center overflow-hidden p-4 sm:p-8 lg:p-10">
                   <div className="shrink-0">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
                       {categoryName(resolveProductCategory(selectedProduct))}
                     </p>
 
-                    <h3 className="mt-4 text-3xl font-medium tracking-[-0.04em] text-[#2d2923] sm:text-4xl">
+                    <h3 className="mt-4 text-2xl font-medium tracking-[-0.04em] text-[#2d2923] sm:text-3xl lg:text-4xl">
                       {selectedProduct.title}
                     </h3>
 
-                    <p className="mt-5 text-2xl font-semibold text-[#2d2923]">
+                    <p className="mt-4 text-xl font-semibold text-[#2d2923] sm:text-2xl">
                       {selectedProduct.price.toLocaleString('hu-HU')} Ft
                     </p>
 
@@ -682,13 +682,13 @@ export default function HomePage() {
                         handleAddToCart(selectedProduct);
                         closeProductModal();
                       }}
-                      className="mt-6 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#1d1a17]"
+                      className="mt-5 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1d1a17] sm:mt-6 sm:px-5 sm:py-3"
                     >
                       Kosárba
                     </button>
                   </div>
 
-                  <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#d8d0c6] pt-6">
+                  <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#d8d0c6] pt-5 sm:mt-8 sm:pt-6">
                     <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
                       Leírás
                     </p>

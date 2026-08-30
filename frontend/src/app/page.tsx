@@ -77,7 +77,7 @@ const categoryLabels: Record<CategoryFilter, string> = {
   all: 'Minden termék',
   olajok: 'Hidegen sajtolt olajok',
   szorpok: 'Szörpök & gyümölcslevek',
-  lisztek: 'Kézműves lisztek',
+  lisztek: 'Lisztek & hüvelyesek',
 };
 
 const testimonials = [
@@ -154,7 +154,12 @@ function inferProductCategory(value: string): CategoryFilter {
     lower.includes('liszt') ||
     lower.includes('búza') ||
     lower.includes('gabona') ||
-    lower.includes('tönköly')
+    lower.includes('tönköly') ||
+    lower.includes('bab') ||
+    lower.includes('hüvelyes') ||
+    lower.includes('lencse') ||
+    lower.includes('borsó') ||
+    lower.includes('csicseriborsó')
   ) {
     return 'lisztek';
   }
@@ -233,9 +238,9 @@ function decodeHtmlEntities(value: string) {
 
   if (typeof window !== 'undefined' && 'DOMParser' in window) {
     const doc = new DOMParser().parseFromString(decoded, 'text/html');
-    const decodedText = doc.documentElement.textContent ?? decoded;
-    if (decodedText.trim()) {
-      decoded = decodedText;
+    const bodyHtml = doc.body?.innerHTML ?? doc.documentElement?.innerHTML ?? decoded;
+    if (bodyHtml.trim()) {
+      decoded = bodyHtml;
     }
   }
 
@@ -258,7 +263,20 @@ function formatProductDescriptionHtml(value?: string) {
     return '<p>Kézműves, természetes és gondosan készült termék.</p>';
   }
 
-  const allowedTags = new Set(['p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'span', 'a']);
+  const allowedTags = new Set([
+    'p',
+    'div',
+    'br',
+    'strong',
+    'b',
+    'em',
+    'i',
+    'ul',
+    'ol',
+    'li',
+    'span',
+    'a',
+  ]);
 
   return decoded.replace(/<\/?([a-z0-9]+)(\s[^>]*)?>/gi, (match, tagName) => {
     const normalizedTag = String(tagName).toLowerCase();
@@ -269,7 +287,7 @@ function formatProductDescriptionHtml(value?: string) {
 function categoryName(category: CategoryFilter) {
   if (category === 'olajok') return 'Olajok';
   if (category === 'szorpok') return 'Szörpök';
-  if (category === 'lisztek') return 'Lisztek';
+  if (category === 'lisztek') return 'Lisztek & hüvelyesek';
   return 'Termék';
 }
 
@@ -479,9 +497,7 @@ export default function HomePage() {
                     <article
                       key={product.id}
                       onClick={() => openProductModal(product)}
-                      className={`group cursor-pointer ${
-                        index % 3 === 1 ? 'sm:translate-y-8 xl:translate-y-10' : ''
-                      }`}
+                      className="group cursor-pointer"
                     >
                       <div className="relative overflow-hidden rounded-[22px] bg-[#e5e0d6] shadow-[0_10px_22px_rgba(38,30,22,0.05)]">
                         <div className="aspect-[5/6] overflow-hidden bg-[#efeae1]">
@@ -552,11 +568,11 @@ export default function HomePage() {
 
         {selectedProduct ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1d1914]/75 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1d1914]/75 p-3 sm:p-4 backdrop-blur-sm"
             onClick={closeProductModal}
           >
             <div
-              className="relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
+              className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -571,10 +587,10 @@ export default function HomePage() {
                 <X className="h-4 w-4" />
               </button>
 
-              <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid max-h-[90vh] lg:grid-cols-[1.2fr_0.8fr]">
                 <div className="bg-[#ece4d8] p-4 sm:p-6">
                   <div className="overflow-hidden rounded-[22px] border border-[#d9d3c8] bg-[#f4efe9]">
-                    <div className="flex h-[420px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[520px]">
+                    <div className="flex h-[300px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[420px] lg:h-[520px]">
                       <img
                         src={
                           selectedProduct.image
@@ -586,40 +602,41 @@ export default function HomePage() {
                       />
                     </div>
                   </div>
-
                 </div>
 
-                <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
-                    {categoryName(resolveProductCategory(selectedProduct))}
-                  </p>
+                <div className="flex min-h-0 flex-col justify-center overflow-hidden p-5 sm:p-8 lg:p-10">
+                  <div className="shrink-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
+                      {categoryName(resolveProductCategory(selectedProduct))}
+                    </p>
 
-                  <h3 className="mt-4 text-3xl font-medium tracking-[-0.04em] text-[#2d2923] sm:text-4xl">
-                    {selectedProduct.title}
-                  </h3>
+                    <h3 className="mt-4 text-3xl font-medium tracking-[-0.04em] text-[#2d2923] sm:text-4xl">
+                      {selectedProduct.title}
+                    </h3>
 
-                  <p className="mt-5 text-2xl font-semibold text-[#2d2923]">
-                    {selectedProduct.price.toLocaleString('hu-HU')} Ft
-                  </p>
+                    <p className="mt-5 text-2xl font-semibold text-[#2d2923]">
+                      {selectedProduct.price.toLocaleString('hu-HU')} Ft
+                    </p>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleAddToCart(selectedProduct);
-                      closeProductModal();
-                    }}
-                    className="mt-6 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#1d1a17]"
-                  >
-                    Kosárba
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAddToCart(selectedProduct);
+                        closeProductModal();
+                      }}
+                      className="mt-6 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#1d1a17]"
+                    >
+                      Kosárba
+                    </button>
+                  </div>
 
-                  <div className="mt-8 border-t border-[#d8d0c6] pt-6">
+                  <div className="mt-8 flex min-h-0 flex-1 flex-col border-t border-[#d8d0c6] pt-6">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
                       Leírás
                     </p>
 
                     <div
-                      className="mt-4 max-h-[32rem] overflow-y-auto pr-2 text-base leading-7 text-[#564f46] [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic"
+                      className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 text-base leading-7 text-[#564f46] [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_div]:mb-3 [&_a]:text-[#2d2923] [&_a]:underline"
                       dangerouslySetInnerHTML={{
                         __html: formatProductDescriptionHtml(selectedProduct.description),
                       }}

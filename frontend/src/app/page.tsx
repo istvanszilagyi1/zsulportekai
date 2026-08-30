@@ -278,10 +278,68 @@ function formatProductDescriptionHtml(value?: string) {
     'a',
   ]);
 
-  return decoded.replace(/<\/?([a-z0-9]+)(\s[^>]*)?>/gi, (match, tagName) => {
-    const normalizedTag = String(tagName).toLowerCase();
-    return allowedTags.has(normalizedTag) ? match : '';
-  });
+  if (typeof window === 'undefined' || !('DOMParser' in window)) {
+    return decoded.replace(/<\/?([a-z0-9]+)(\s[^>]*)?>/gi, (match, tagName) => {
+      const normalizedTag = String(tagName).toLowerCase();
+      return allowedTags.has(normalizedTag) ? match : '';
+    });
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(decoded, 'text/html');
+  const fragment = doc.createDocumentFragment();
+
+  const visit = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? '';
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return '';
+    }
+
+    const element = node as Element;
+    const tagName = element.tagName.toLowerCase();
+
+    if (!allowedTags.has(tagName)) {
+      let result = '';
+      for (const child of Array.from(element.childNodes)) {
+        result += visit(child);
+      }
+      return result;
+    }
+
+    const inner = Array.from(element.childNodes)
+      .map((child) => visit(child))
+      .join('');
+
+    if (tagName === 'br') {
+      return '<br />';
+    }
+
+    if (tagName === 'p' || tagName === 'div' || tagName === 'li' || tagName === 'span') {
+      return `<${tagName}>${inner}</${tagName}>`;
+    }
+
+    if (tagName === 'ul' || tagName === 'ol') {
+      return `<${tagName}>${inner}</${tagName}>`;
+    }
+
+    if (tagName === 'strong' || tagName === 'b' || tagName === 'em' || tagName === 'i') {
+      return `<${tagName}>${inner}</${tagName}>`;
+    }
+
+    if (tagName === 'a') {
+      const href = element.getAttribute('href');
+      return href ? `<a href="${href}" target="_blank" rel="noreferrer">${inner}</a>` : inner;
+    }
+
+    return inner;
+  };
+
+  return Array.from(doc.body.childNodes)
+    .map((node) => visit(node))
+    .join('') || '<p>Kézműves, természetes és gondosan készült termék.</p>';
 }
 
 function categoryName(category: CategoryFilter) {
@@ -568,11 +626,11 @@ export default function HomePage() {
 
         {selectedProduct ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1d1914]/75 p-3 sm:p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#1d1914]/75 p-3 sm:p-4 backdrop-blur-sm"
             onClick={closeProductModal}
           >
             <div
-              className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
+              className="relative my-4 w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -630,7 +688,7 @@ export default function HomePage() {
                     </button>
                   </div>
 
-                  <div className="mt-8 flex min-h-0 flex-1 flex-col border-t border-[#d8d0c6] pt-6">
+                  <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#d8d0c6] pt-6">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
                       Leírás
                     </p>

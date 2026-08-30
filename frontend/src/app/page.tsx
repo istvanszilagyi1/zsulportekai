@@ -28,6 +28,10 @@ type ProductRecord = Product & {
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
+const businessAddress = '4220 Hajdúböszörmény, Kisböszörmény utca 3';
+const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(businessAddress)}&z=17&output=embed`;
+const mapDirectionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessAddress)}`;
+
 const heroImage =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000039-d6411d6413/DSC02127-5.webp?ph=4e95f92e87';
 
@@ -630,7 +634,7 @@ export default function HomePage() {
             onClick={closeProductModal}
           >
             <div
-              className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)] sm:rounded-[28px]"
+              className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-y-auto rounded-[24px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)] sm:rounded-[28px]"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -645,7 +649,7 @@ export default function HomePage() {
                 <X className="h-4 w-4" />
               </button>
 
-              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid min-h-0 flex-1 lg:grid-cols-[1.2fr_0.8fr]">
                 <div className="bg-[#ece4d8] p-3 sm:p-6">
                   <div className="overflow-hidden rounded-[20px] border border-[#d9d3c8] bg-[#f4efe9] sm:rounded-[22px]">
                     <div className="flex h-[220px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[320px] lg:h-[520px]">
@@ -662,7 +666,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-col justify-center overflow-hidden p-4 sm:p-8 lg:p-10">
+                <div className="flex min-h-0 flex-col justify-center p-4 sm:p-8 lg:p-10">
                   <div className="shrink-0">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
                       {categoryName(resolveProductCategory(selectedProduct))}
@@ -688,13 +692,13 @@ export default function HomePage() {
                     </button>
                   </div>
 
-                  <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#d8d0c6] pt-5 sm:mt-8 sm:pt-6">
+                  <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-[#d8d0c6] pt-5 sm:mt-8 sm:pt-6">
                     <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
                       Leírás
                     </p>
 
                     <div
-                      className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 text-base leading-7 text-[#564f46] [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_div]:mb-3 [&_a]:text-[#2d2923] [&_a]:underline"
+                      className="mt-4 min-h-0 flex-1 pr-2 text-base leading-7 text-[#564f46] [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_div]:mb-3 [&_a]:text-[#2d2923] [&_a]:underline"
                       dangerouslySetInnerHTML={{
                         __html: formatProductDescriptionHtml(selectedProduct.description),
                       }}
@@ -1226,13 +1230,32 @@ export default function HomePage() {
               </div>
 
               <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-[#1d1b18]">
-                <iframe
-                  title="Zsül Portékái elhelyezkedése"
-                  src="https://www.google.com/maps?q=4220%20Hajd%C3%BAb%C3%B6sz%C3%B6rm%C3%A9ny%2C%20Kisb%C3%B6sz%C3%B6rm%C3%A9ny%20utca%203&z=15&output=embed"
-                  className="h-56 w-full border-0 grayscale contrast-125"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+                <div className="relative">
+                  <iframe
+                    title="Zsül Portékái elhelyezkedése"
+                    src={mapEmbedUrl}
+                    className="h-56 w-full border-0 grayscale contrast-125"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+
+                  <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full bg-[#1d1b18]/90 px-3 py-1.5 text-[11px] font-medium text-[#f4f0e7] shadow-lg shadow-[#14110f]/40 ring-1 ring-white/10 backdrop-blur-sm">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#e76f51] shadow-[0_0_0_5px_rgba(231,111,81,0.18)]" />
+                    <span>Kisböszörmény utca 3</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex justify-end">
+                <a
+                  href={mapDirectionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-[#f5c57a] transition hover:text-white"
+                >
+                  Megnyitás a Google Térképen
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               </div>
             </div>
 

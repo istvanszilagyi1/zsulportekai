@@ -75,6 +75,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, url: session.url }, { status: 200 });
   } catch (error) {
     console.error('Stripe checkout creation failed:', error);
-    return NextResponse.json({ error: 'A Stripe fizetési session létrehozása sikertelen volt.' }, { status: 500 });
+
+    const message = error instanceof Error ? error.message : 'Ismeretlen Stripe hiba';
+    const stripeError = typeof error === 'object' && error && 'type' in error ? error : null;
+
+    console.error('Stripe error details:', {
+      message,
+      type: stripeError && 'type' in stripeError ? stripeError.type : undefined,
+      code: stripeError && 'code' in stripeError ? stripeError.code : undefined,
+      param: stripeError && 'param' in stripeError ? stripeError.param : undefined,
+      raw: stripeError && 'raw' in stripeError ? stripeError.raw : undefined,
+    });
+
+    return NextResponse.json({ error: 'A Stripe fizetési session létrehozása sikertelen volt.', details: message }, { status: 500 });
   }
 }

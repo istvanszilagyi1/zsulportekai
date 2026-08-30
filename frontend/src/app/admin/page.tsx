@@ -74,6 +74,15 @@ type EmailLogEntry = {
   from?: string;
 };
 
+type CouponRecord = {
+  id: string;
+  code: string;
+  discount_percent: number;
+  active?: boolean;
+  description?: string;
+  created?: string;
+};
+
 const ORDER_STATUS_OPTIONS: OrderStatus[] = [
   'pending',
   'paid',
@@ -200,8 +209,16 @@ export default function AdminPage() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'invoices'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'coupons'>('orders');
   const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([]);
+  const [coupons, setCoupons] = useState<CouponRecord[]>([]);
+  const [couponForm, setCouponForm] = useState({
+    id: '',
+    code: '',
+    discount_percent: 10,
+    active: true,
+    description: '',
+  });
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
   const [replySubject, setReplySubject] = useState('');
@@ -244,12 +261,33 @@ export default function AdminPage() {
     }
   };
 
+  const fetchCoupons = async () => {
+    try {
+      const records = await pb.collection('coupons').getFullList({
+        sort: '-created',
+      });
+
+      const normalized = (records as unknown as CouponRecord[]) ?? [];
+      setCoupons(normalized.map((coupon) => ({
+        ...coupon,
+        code: String(coupon.code ?? '').toUpperCase(),
+        discount_percent: Number(coupon.discount_percent ?? 0),
+        active: Boolean(coupon.active),
+        description: coupon.description ?? '',
+      })));
+    } catch (error) {
+      console.error('Kuponok betöltése sikertelen:', error);
+      setCoupons([]);
+    }
+  };
+
   useEffect(() => {
     const authenticated = Boolean(pb.authStore.isValid && pb.authStore.model);
     setIsAuthenticated(authenticated);
 
     if (authenticated) {
       fetchOrders();
+      fetchCoupons();
       const savedLog = localStorage.getItem('zsulportekai-email-log');
       if (savedLog) {
         try {
@@ -403,6 +441,66 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Rendelés törlése sikertelen:', error);
       window.alert('A rendelés törlése sikertelen volt.');
+    }
+  };
+
+  const handleSaveCoupon = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const normalizedCode = couponForm.code.trim().toUpperCase();
+    if (!normalizedCode || couponForm.discount_percent <= 0 || couponForm.discount_percent > 100) {
+      window.alert('A kupon kód és az engedmény százalék érvényes értéket kell, hogy kapjon.');
+      return;
+    }
+
+    try {
+      const payload = {
+        code: normalizedCode,
+        discount_percent: Number(couponForm.discount_percent),
+        active: Boolean(couponForm.active),
+        description: couponForm.description.trim(),
+      };
+
+      if (couponForm.id) {
+        await pb.collection('coupons').update(couponForm.id, payload);
+      } else {
+        await pb.collection('coupons').create(payload);
+      }
+
+      setCouponForm({ id: '', code: '', discount_percent: 10, active: true, description: '' });
+      await fetchCoupons();
+    } catch (error) {
+      console.error('Kupon mentése sikertelen:', error);
+      window.alert('A kupon mentése sikertelen volt.');
+    }
+  };
+
+  const handleEditCoupon = (coupon: CouponRecord) => {
+    setCouponForm({
+      id: coupon.id,
+      code: coupon.code,
+      discount_percent: Number(coupon.discount_percent ?? 0),
+      active: Boolean(coupon.active),
+      description: coupon.description ?? '',
+    });
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    const coupon = coupons.find((item) => item.id === couponId);
+    if (!coupon) return;
+
+    const confirmed = window.confirm(`Biztosan törlöd a(z) ${coupon.code} kuponkódot?`);
+    if (!confirmed) return;
+
+    try {
+      await pb.collection('coupons').delete(couponId);
+      setCoupons((current) => current.filter((item) => item.id !== couponId));
+      if (couponForm.id === couponId) {
+        setCouponForm({ id: '', code: '', discount_percent: 10, active: true, description: '' });
+      }
+    } catch (error) {
+      console.error('Kupon törlése sikertelen:', error);
+      window.alert('A kupon törlése sikertelen volt.');
     }
   };
 
@@ -641,11 +739,12 @@ export default function AdminPage() {
           {[
             { key: 'orders', label: 'Rendelések' },
             { key: 'invoices', label: 'Számlák' },
+            { key: 'coupons', label: 'Kuponok' },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices')}
+              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'coupons')}
               className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
                 activeTab === tab.key
                   ? 'bg-[#2d2922] text-white'
@@ -1004,6 +1103,114 @@ export default function AdminPage() {
                   ))}
               </div>
             )}
+          </section>
+        )}
+
+        {activeTab === 'coupons' && (
+          <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">Kuponok</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">Kuponkezelés</h2>
+              </div>
+              <div className="rounded-full bg-[#f2eadc] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#6b5539]">
+                {coupons.filter((coupon) => coupon.active).length} aktív kupon
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveCoupon} className="mb-8 grid gap-4 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5 md:grid-cols-2 xl:grid-cols-5">
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Kupon kód</span>
+                <input
+                  value={couponForm.code}
+                  onChange={(event) => setCouponForm((current) => ({ ...current, code: event.target.value.toUpperCase() }))}
+                  placeholder="ZSUL10"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Kedvezmény %</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={couponForm.discount_percent}
+                  onChange={(event) => setCouponForm((current) => ({ ...current, discount_percent: Number(event.target.value) }))}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Leírás</span>
+                <input
+                  value={couponForm.description}
+                  onChange={(event) => setCouponForm((current) => ({ ...current, description: event.target.value }))}
+                  placeholder="Nyári kedvezmény"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <div className="flex items-end gap-3 xl:col-span-1">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#4c453d]">
+                  <input
+                    type="checkbox"
+                    checked={couponForm.active}
+                    onChange={(event) => setCouponForm((current) => ({ ...current, active: event.target.checked }))}
+                    className="h-4 w-4 accent-[#2d2922]"
+                  />
+                  Aktív
+                </label>
+
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-full bg-[#2d2922] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-[#1e1b18]"
+                >
+                  {couponForm.id ? 'Mentés' : 'Létrehozás'}
+                </button>
+              </div>
+            </form>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {coupons.length === 0 ? (
+                <div className="rounded-[22px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-6 text-sm text-[#5d564f] md:col-span-2 xl:col-span-3">
+                  Még nincs létrehozott kupon.
+                </div>
+              ) : (
+                coupons.map((coupon) => (
+                  <div key={coupon.id} className="rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="text-lg font-semibold text-[#2d2922]">{coupon.code}</div>
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${coupon.active ? 'bg-[#eaf5eb] text-[#2a7b46]' : 'bg-[#fbe9e7] text-[#9a3c2c]'}`}>
+                        {coupon.active ? 'Aktív' : 'Inaktív'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-sm text-[#4c453d]">
+                      <div><span className="font-medium text-[#2d2922]">Kedvezmény:</span> {coupon.discount_percent}%</div>
+                      <div><span className="font-medium text-[#2d2922]">Leírás:</span> {coupon.description || 'Nincs megadva'}</div>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditCoupon(coupon)}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#d9d0c2] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Szerkesztés
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCoupon(coupon.id)}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#e7c4bc] bg-[#fff4f2] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b3d30] hover:border-[#af5646]"
+                      >
+                        <Delete className="h-3.5 w-3.5" />
+                        Törlés
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </section>
         )}
 

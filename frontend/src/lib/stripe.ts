@@ -11,6 +11,19 @@ export const stripePublishableKeyValue = stripePublishableKey || null;
 export const stripeWebhookSecretValue = stripeWebhookSecret || null;
 
 export const getStripeCheckoutUrl = () => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  return appUrl.replace(/\/+$/, '');
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+  try {
+    const parsedUrl = new URL(configuredUrl);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+
+    if (!isLocalhost && parsedUrl.protocol === 'http:') {
+      parsedUrl.protocol = 'https:';
+    }
+
+    return parsedUrl.toString().replace(/\/+$/, '');
+  } catch {
+    return configuredUrl.replace(/\/+$/, '');
+  }
 };

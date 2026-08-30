@@ -79,6 +79,42 @@ const paymentOptions: Array<{
   },
 ];
 
+const VAT_RATE = 0.27;
+const DELIVERY_FEES = {
+  foxpost: 1649,
+  home_delivery: 4686,
+} as const;
+
+type CouponRecord = {
+  id: string;
+  code: string;
+  discount_percent: number;
+  active?: boolean;
+  description?: string;
+};
+
+const calculateNetPrice = (grossPrice: number) => Math.round(grossPrice / (1 + VAT_RATE));
+const calculateVatAmount = (grossPrice: number) => Math.max(0, Math.round(grossPrice - calculateNetPrice(grossPrice)));
+const formatMoney = (value: number) => `${Math.round(value).toLocaleString('hu-HU')} Ft`;
+
+const buildAddress = ({
+  country,
+  city,
+  zip,
+  street,
+  houseNumber,
+}: {
+  country: string;
+  city: string;
+  zip: string;
+  street: string;
+  houseNumber: string;
+}) => [
+  country.trim(),
+  `${zip.trim()} ${city.trim()}`.trim(),
+  `${street.trim()} ${houseNumber.trim()}`.trim(),
+].filter(Boolean).join(', ');
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, totalPrice, clearCart } = useCart();
@@ -91,27 +127,70 @@ export default function CheckoutPage() {
     lastName: '',
     email: '',
     phone: '',
+    country: '',
     city: '',
     street: '',
     zip: '',
+    houseNumber: '',
     companyName: '',
     taxNumber: '',
-    invoiceAddress: '',
+    invoiceCountry: '',
+    invoiceCity: '',
+    invoiceZip: '',
+    invoiceStreet: '',
+    invoiceHouseNumber: '',
     invoiceEmail: '',
+    couponCode: '',
     wantsInvoice: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponRecord | null>(null);
+  const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
   const [error, setError] = useState('');
 
-  const shippingCost = 0;
-
-  const orderTotal = useMemo(() => Math.round(totalPrice + shippingCost), [totalPrice]);
+  const shippingCost = DELIVERY_FEES[deliveryMethod];
+  const couponRate = appliedCoupon ? Number(appliedCoupon.discount_percent || 0) / 100 : 0;
+  const couponDiscount = totalPrice * couponRate;
+  const subtotalAfterDiscount = Math.max(0, totalPrice - couponDiscount);
+  const orderTotal = useMemo(() => Math.round(subtotalAfterDiscount + shippingCost), [subtotalAfterDiscount, shippingCost]);
 
   const updateField = (field: keyof typeof formData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
   };
 
   const canSubmit = cart.length > 0 && !isSubmitting;
+
+  const handleApplyCoupon = async () => {
+    const code = formData.couponCode.trim();
+    setCouponError('');
+
+    if (!code) {
+      setAppliedCoupon(null);
+      return;
+    }
+
+    setIsCheckingCoupon(true);
+
+    try {
+      const response = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`);
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.valid || !payload?.coupon) {
+        setAppliedCoupon(null);
+        setCouponError(payload?.error || 'Érvénytelen kuponkód.');
+        return;
+      }
+
+      setAppliedCoupon(payload.coupon);
+      setCouponError('');
+    } catch {
+      setAppliedCoupon(null);
+      setCouponError('A kupon ellenőrzése sikertelen volt.');
+    } finally {
+      setIsCheckingCoupon(false);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -132,19 +211,21 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (
-      formData.wantsInvoice &&
-      (!formData.companyName.trim() || !formData.taxNumber.trim() || !formData.invoiceAddress.trim())
-    ) {
-      setError('A számla kiállításához add meg a cég neve, adószám és számlázási cím mezőket.');
+    if (deliveryMethod === 'home_delivery' && (!formData.country.trim() || !formData.city.trim() || !formData.street.trim() || !formData.zip.trim() || !formData.houseNumber.trim())) {
+      setError('Kérjük, add meg a szállítási címet: ország, irányítószám, város, utca és házszám.');
       return;
     }
 
     if (
-      deliveryMethod === 'home_delivery' &&
-      (!formData.city.trim() || !formData.street.trim() || !formData.zip.trim())
+      formData.wantsInvoice &&
+      (!formData.companyName.trim() || !formData.taxNumber.trim() || !formData.invoiceCountry.trim() || !formData.invoiceCity.trim() || !formData.invoiceZip.trim() || !formData.invoiceStreet.trim() || !formData.invoiceHouseNumber.trim())
     ) {
-      setError('Kérjük, add meg a szállítási címet.');
+      setError('A számla kiállításához add meg a cég nevét, adószámát és a számlázási cím teljes adatait.');
+      return;
+    }
+
+    if (formData.couponCode.trim() && !appliedCoupon) {
+      setError('A kuponkód érvényesítése szükséges a rendelés előtt.');
       return;
     }
 
@@ -154,7 +235,25 @@ export default function CheckoutPage() {
       const isPaid = paymentMethod === 'stripe';
       const customerFirstName = formData.firstName.trim();
       const customerLastName = formData.lastName.trim();
-      const customerName = [customerFirstName, customerLastName].filter(Boolean).join(' ');
+      const customerName = [customerLastName, customerFirstName].filter(Boolean).join(' ');
+      const shippingAddress = deliveryMethod === 'home_delivery'
+        ? buildAddress({
+            country: formData.country,
+            city: formData.city,
+            zip: formData.zip,
+            street: formData.street,
+            houseNumber: formData.houseNumber,
+          })
+        : undefined;
+      const invoiceAddress = formData.wantsInvoice
+        ? buildAddress({
+            country: formData.invoiceCountry,
+            city: formData.invoiceCity,
+            zip: formData.invoiceZip,
+            street: formData.invoiceStreet,
+            houseNumber: formData.invoiceHouseNumber,
+          })
+        : undefined;
 
       const payload = {
         customer_name: customerName,
@@ -168,8 +267,11 @@ export default function CheckoutPage() {
         invoice_required: formData.wantsInvoice,
         invoice_company_name: formData.wantsInvoice ? formData.companyName.trim() : undefined,
         invoice_tax_number: formData.wantsInvoice ? formData.taxNumber.trim() : undefined,
-        invoice_address: formData.wantsInvoice ? formData.invoiceAddress.trim() : undefined,
+        invoice_address: invoiceAddress,
         invoice_email: formData.wantsInvoice ? formData.invoiceEmail.trim() || formData.email.trim() : undefined,
+        coupon_code: appliedCoupon?.code || undefined,
+        coupon_discount_percent: appliedCoupon ? Number(appliedCoupon.discount_percent || 0) : undefined,
+        coupon_discount_amount: appliedCoupon ? Math.round(couponDiscount) : undefined,
         items: cart.map(({ product, quantity }) => ({
           id: product.id,
           title: product.title,
@@ -185,7 +287,7 @@ export default function CheckoutPage() {
               foxpost_place_address: foxpostSelection?.address,
             }
           : {
-              shipping_address: `${formData.street.trim()}, ${formData.zip.trim()} ${formData.city.trim()}`,
+              shipping_address: shippingAddress,
             }),
       };
 
@@ -434,17 +536,14 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   <div className="grid gap-5 rounded-[22px] border border-[#e0d8cb] bg-[#faf8f5] p-4 sm:grid-cols-2 sm:p-5">
-                    <label className="flex flex-col gap-2 sm:col-span-2">
-                      <span className="text-sm font-medium text-[#4c453d]">Utca, házszám</span>
-                      <div className="relative">
-                        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f867b]" />
-                        <input
-                          value={formData.street}
-                          onChange={(event) => updateField('street', event.target.value)}
-                          placeholder="Kossuth Lajos utca 12."
-                          className="w-full rounded-2xl border border-[#dad0c3] bg-white py-3 pl-10 pr-4 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
-                        />
-                      </div>
+                    <label className="flex flex-col gap-2">
+                      <span className="text-sm font-medium text-[#4c453d]">Ország</span>
+                      <input
+                        value={formData.country}
+                        onChange={(event) => updateField('country', event.target.value)}
+                        placeholder="Magyarország"
+                        className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                      />
                     </label>
 
                     <label className="flex flex-col gap-2">
@@ -463,6 +562,29 @@ export default function CheckoutPage() {
                         value={formData.zip}
                         onChange={(event) => updateField('zip', event.target.value)}
                         placeholder="4220"
+                        className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 sm:col-span-2">
+                      <span className="text-sm font-medium text-[#4c453d]">Utca, házszám</span>
+                      <div className="relative">
+                        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f867b]" />
+                        <input
+                          value={formData.street}
+                          onChange={(event) => updateField('street', event.target.value)}
+                          placeholder="Kossuth Lajos utca"
+                          className="w-full rounded-2xl border border-[#dad0c3] bg-white py-3 pl-10 pr-4 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                        />
+                      </div>
+                    </label>
+
+                    <label className="flex flex-col gap-2 sm:col-span-2">
+                      <span className="text-sm font-medium text-[#4c453d]">Házszám</span>
+                      <input
+                        value={formData.houseNumber}
+                        onChange={(event) => updateField('houseNumber', event.target.value)}
+                        placeholder="12"
                         className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
                       />
                     </label>
@@ -573,13 +695,52 @@ export default function CheckoutPage() {
                     />
                   </label>
 
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Ország</span>
+                    <input
+                      value={formData.invoiceCountry}
+                      onChange={(event) => updateField('invoiceCountry', event.target.value)}
+                      placeholder="Magyarország"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Irányítószám</span>
+                    <input
+                      value={formData.invoiceZip}
+                      onChange={(event) => updateField('invoiceZip', event.target.value)}
+                      placeholder="1011"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Város</span>
+                    <input
+                      value={formData.invoiceCity}
+                      onChange={(event) => updateField('invoiceCity', event.target.value)}
+                      placeholder="Budapest"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
                   <label className="flex flex-col gap-2 sm:col-span-2">
-                    <span className="text-sm font-medium text-[#4c453d]">Számlázási cím</span>
-                    <textarea
-                      value={formData.invoiceAddress}
-                      onChange={(event) => updateField('invoiceAddress', event.target.value)}
-                      placeholder="1234 Budapest, Példa utca 13."
-                      rows={3}
+                    <span className="text-sm font-medium text-[#4c453d]">Utca, házszám</span>
+                    <input
+                      value={formData.invoiceStreet}
+                      onChange={(event) => updateField('invoiceStreet', event.target.value)}
+                      placeholder="Példa utca"
+                      className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2 sm:col-span-2">
+                    <span className="text-sm font-medium text-[#4c453d]">Házszám</span>
+                    <input
+                      value={formData.invoiceHouseNumber}
+                      onChange={(event) => updateField('invoiceHouseNumber', event.target.value)}
+                      placeholder="13"
                       className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
                     />
                   </label>
@@ -632,19 +793,74 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              <div className="mt-6 space-y-3 rounded-[22px] border border-[#e3ded3] bg-white p-4">
-                <div className="flex items-center justify-between text-sm text-[#5d554d]">
-                  <span>Termékek összesen</span>
-                  <span>{totalPrice.toLocaleString('hu-HU')} Ft</span>
+              <div className="mt-6 rounded-[22px] border border-[#e3ded3] bg-white p-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm text-[#5d554d]">
+                    <span>Termékek összesen</span>
+                    <span>{formatMoney(totalPrice)}</span>
+                  </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-[#4d8d56]">
+                      <span>Kupon kedvezmény</span>
+                      <span>- {formatMoney(couponDiscount)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm text-[#5d554d]">
+                    <span>Szállítás</span>
+                    <span>{formatMoney(shippingCost)}</span>
+                  </div>
+                  <div className="border-t border-[#e5dfd3] pt-3">
+                    <div className="flex items-center justify-between text-sm text-[#5d554d]">
+                      <span>ÁFA nélkül</span>
+                      <span>{formatMoney(calculateNetPrice(orderTotal))}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-xs uppercase tracking-[0.14em] text-[#7a7369]">
+                      <span>ÁFA 27%</span>
+                      <span>{formatMoney(calculateVatAmount(orderTotal))}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-[#e5dfd3] pt-3 text-base font-semibold text-[#2d2922]">
+                    <span>Végösszeg</span>
+                    <span>{formatMoney(orderTotal)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm text-[#5d554d]">
-                  <span>Szállítás</span>
-                  <span>{shippingCost.toLocaleString('hu-HU')} Ft</span>
+              </div>
+
+              <div className="mt-5 rounded-[22px] border border-[#e3ded3] bg-white p-4">
+                <label className="block text-sm font-medium text-[#4c453d]">Kuponkód</label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={formData.couponCode}
+                    onChange={(event) => {
+                      updateField('couponCode', event.target.value);
+                      if (appliedCoupon && event.target.value.trim().toUpperCase() !== appliedCoupon.code.toUpperCase()) {
+                        setAppliedCoupon(null);
+                      }
+                      if (couponError) {
+                        setCouponError('');
+                      }
+                    }}
+                    placeholder="ZSUL10"
+                    className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={isCheckingCoupon || !formData.couponCode.trim()}
+                    className="rounded-full bg-[#2d2922] px-3.5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:bg-[#a49d93]"
+                  >
+                    {isCheckingCoupon ? '...' : 'Érvényesít'}
+                  </button>
                 </div>
-                <div className="flex items-center justify-between border-t border-[#e5dfd3] pt-3 text-base font-semibold text-[#2d2922]">
-                  <span>Végösszeg</span>
-                  <span>{orderTotal.toLocaleString('hu-HU')} Ft</span>
-                </div>
+                {couponError ? (
+                  <p className="mt-2 text-xs text-[#8e4a2d]">{couponError}</p>
+                ) : appliedCoupon ? (
+                  <p className="mt-2 text-xs text-[#356b42]">Kupon aktiválva: {appliedCoupon.code} ({appliedCoupon.discount_percent}% kedvezmény)</p>
+                ) : (
+                  <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[#7b756b]">
+                    Admin által szerkeszthető kuponkódok
+                  </p>
+                )}
               </div>
 
               {error && (

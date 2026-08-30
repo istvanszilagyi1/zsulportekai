@@ -76,7 +76,7 @@ const getCustomerDisplayName = (order: OrderEmailInput) => {
   const lastName = (order.customer_last_name ?? '').trim();
 
   if (firstName || lastName) {
-    return [firstName, lastName].filter(Boolean).join(' ') || 'N/A';
+    return [lastName, firstName].filter(Boolean).join(' ') || 'N/A';
   }
 
   return (order.customer_name ?? '').trim() || 'N/A';

@@ -630,7 +630,7 @@ export default function HomePage() {
             onClick={closeProductModal}
           >
             <div
-              className="relative my-4 w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
+              className="relative my-4 flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)]"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -645,7 +645,7 @@ export default function HomePage() {
                 <X className="h-4 w-4" />
               </button>
 
-              <div className="grid max-h-[90vh] lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1.2fr_0.8fr]">
                 <div className="bg-[#ece4d8] p-4 sm:p-6">
                   <div className="overflow-hidden rounded-[22px] border border-[#d9d3c8] bg-[#f4efe9]">
                     <div className="flex h-[300px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[420px] lg:h-[520px]">
@@ -689,7 +689,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#d8d0c6] pt-6">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
+                    <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7b766a]">
                       Leírás
                     </p>
 
@@ -1228,7 +1228,7 @@ export default function HomePage() {
               <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-[#1d1b18]">
                 <iframe
                   title="Zsül Portékái elhelyezkedése"
-                  src="https://www.google.com/maps?q=4220%20Hajd%C3%BAb%C3%B6sz%C3%B6rm%C3%A9ny%2C%20Kisb%C3%B6sz%C3%B6rm%C3%A9ny%20utca%203&output=embed"
+                  src="https://www.google.com/maps?q=4220%20Hajd%C3%BAb%C3%B6sz%C3%B6rm%C3%A9ny%2C%20Kisb%C3%B6sz%C3%B6rm%C3%A9ny%20utca%203&z=15&output=embed"
                   className="h-56 w-full border-0 grayscale contrast-125"
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"

@@ -151,7 +151,10 @@ export default function CheckoutPage() {
 
   const shippingCost = DELIVERY_FEES[deliveryMethod];
   const couponRate = appliedCoupon ? Number(appliedCoupon.discount_percent || 0) / 100 : 0;
-  const couponDiscount = totalPrice * couponRate;
+  const couponDiscount = useMemo(
+    () => Math.round(totalPrice * couponRate),
+    [totalPrice, couponRate],
+  );
   const subtotalAfterDiscount = Math.max(0, totalPrice - couponDiscount);
   const orderTotal = useMemo(() => Math.round(subtotalAfterDiscount + shippingCost), [subtotalAfterDiscount, shippingCost]);
 

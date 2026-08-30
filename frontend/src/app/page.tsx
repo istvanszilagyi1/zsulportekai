@@ -252,6 +252,20 @@ function sanitizeText(value?: string) {
   return cleanText || 'Kézműves, természetes és gondosan készült termék.';
 }
 
+function formatProductDescriptionHtml(value?: string) {
+  const decoded = decodeHtmlEntities(value ?? '').trim();
+  if (!decoded) {
+    return '<p>Kézműves, természetes és gondosan készült termék.</p>';
+  }
+
+  const allowedTags = new Set(['p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'span', 'a']);
+
+  return decoded.replace(/<\/?([a-z0-9]+)(\s[^>]*)?>/gi, (match, tagName) => {
+    const normalizedTag = String(tagName).toLowerCase();
+    return allowedTags.has(normalizedTag) ? match : '';
+  });
+}
+
 function categoryName(category: CategoryFilter) {
   if (category === 'olajok') return 'Olajok';
   if (category === 'szorpok') return 'Szörpök';
@@ -516,10 +530,6 @@ export default function HomePage() {
                           <h3 className="text-lg font-medium tracking-[-0.025em] text-[#2c2923] sm:text-xl">
                             {product.title}
                           </h3>
-
-                          <p className="mt-2 text-sm leading-5 text-[#777166]">
-                            {sanitizeText(product.description)}
-                          </p>
                         </div>
 
                         <div className="shrink-0 text-right">
@@ -608,9 +618,12 @@ export default function HomePage() {
                       Leírás
                     </p>
 
-                    <p className="mt-4 whitespace-pre-line text-base leading-7 text-[#564f46]">
-                      {sanitizeText(selectedProduct.description)}
-                    </p>
+                    <div
+                      className="mt-4 max-h-[32rem] overflow-y-auto pr-2 text-base leading-7 text-[#564f46] [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic"
+                      dangerouslySetInnerHTML={{
+                        __html: formatProductDescriptionHtml(selectedProduct.description),
+                      }}
+                    />
                   </div>
                 </div>
               </div>

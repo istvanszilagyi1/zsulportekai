@@ -642,7 +642,7 @@ export default function HomePage() {
             onClick={closeProductModal}
           >
             <div
-              className="relative max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[24px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)] sm:rounded-[28px]"
+              className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-[#d9d0c2] bg-[#f7f4ed] shadow-[0_30px_90px_rgba(28,22,18,0.28)] sm:rounded-[28px]"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -657,7 +657,7 @@ export default function HomePage() {
                 <X className="h-4 w-4" />
               </button>
 
-              <div className="grid max-h-[92vh] overflow-hidden lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1.2fr_0.8fr]">
                 <div className="bg-[#ece4d8] p-3 sm:p-6">
                   <div className="overflow-hidden rounded-[20px] border border-[#d9d3c8] bg-[#f4efe9] sm:rounded-[22px]">
                     <div className="flex h-[220px] items-center justify-center overflow-hidden bg-[#f3eee7] sm:h-[320px] lg:h-[520px]">
@@ -674,7 +674,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-col justify-center overflow-hidden p-4 sm:p-8 lg:p-10">
+                <div className="flex min-h-0 flex-col overflow-y-auto p-4 sm:p-8 lg:p-10">
                   <div className="shrink-0">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#7b766a]">
                       {categoryName(resolveProductCategory(selectedProduct))}
@@ -706,7 +706,7 @@ export default function HomePage() {
                     </p>
 
                     <div
-                      className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 text-base leading-7 text-[#564f46] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_div]:mb-3 [&_a]:text-[#2d2923] [&_a]:underline"
+                      className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 text-base leading-7 text-[#564f46] [scrollbar-width:thin] [-ms-overflow-style:scrollbar] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d3cabd] [&_p]:mb-3 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_div]:mb-3 [&_a]:text-[#2d2923] [&_a]:underline"
                       dangerouslySetInnerHTML={{
                         __html: formatProductDescriptionHtml(selectedProduct.description),
                       }}

@@ -10,6 +10,15 @@ export function getPocketBaseBaseUrl(): string {
   return configuredUrl.trim().replace(/\/+$/, '');
 }
 
+export function getPublicPocketBaseUrl(): string {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_POCKETBASE_URL ||
+    process.env.NEXT_PUBLIC_POCKETBASE_PUBLIC_URL ||
+    getPocketBaseBaseUrl();
+
+  return configuredUrl.trim().replace(/\/+$/, '');
+}
+
 const pocketbaseUrl = getPocketBaseBaseUrl();
 
 export const pb = new PocketBase(pocketbaseUrl);
@@ -58,8 +67,15 @@ export function getImageUrl(record: any, fileName: string): string {
     return value;
   }
 
+  const publicBaseUrl = getPublicPocketBaseUrl();
   const collectionId = record?.collectionId ?? record?.collection_id ?? 'unknown';
   const recordId = record?.id ?? 'unknown';
+
+  if (publicBaseUrl && /^(https?:)?\/\//i.test(publicBaseUrl)) {
+    const normalizedBase = publicBaseUrl.replace(/\/+$/, '');
+    return `${normalizedBase}/api/files/${encodeURIComponent(collectionId)}/${encodeURIComponent(recordId)}/${encodeURIComponent(value)}`;
+  }
+
   const params = new URLSearchParams({
     collectionId,
     recordId,

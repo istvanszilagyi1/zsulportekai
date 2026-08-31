@@ -2,9 +2,9 @@ import PocketBase from 'pocketbase';
 
 export function getPocketBaseBaseUrl(): string {
   const configuredUrl =
-    process.env.NEXT_PUBLIC_POCKETBASE_PUBLIC_URL ||
-    process.env.NEXT_PUBLIC_POCKETBASE_URL ||
     process.env.POCKETBASE_URL ||
+    process.env.NEXT_PUBLIC_POCKETBASE_URL ||
+    process.env.NEXT_PUBLIC_POCKETBASE_PUBLIC_URL ||
     'http://127.0.0.1:8090';
 
   return configuredUrl.trim().replace(/\/+$/, '');
@@ -12,7 +12,6 @@ export function getPocketBaseBaseUrl(): string {
 
 const pocketbaseUrl = getPocketBaseBaseUrl();
 
-// PocketBase kapcsolat inicializálása a publikus base URL alapján.
 export const pb = new PocketBase(pocketbaseUrl);
 
 export async function getAdminPocketBaseClient() {
@@ -50,7 +49,6 @@ export async function updateOrderRecord(orderId: string, payload: Record<string,
   }
 }
 
-// Segédfüggvény: PocketBase kép URL generálása a publikus base URL alapján.
 export function getImageUrl(record: any, fileName: string): string {
   if (!fileName) return '/placeholder.png';
 
@@ -60,11 +58,13 @@ export function getImageUrl(record: any, fileName: string): string {
     return value;
   }
 
-  const publicBaseUrl = getPocketBaseBaseUrl();
+  const collectionId = record?.collectionId ?? record?.collection_id ?? 'unknown';
+  const recordId = record?.id ?? 'unknown';
+  const params = new URLSearchParams({
+    collectionId,
+    recordId,
+    fileName: value,
+  });
 
-  if (pb.baseUrl !== publicBaseUrl) {
-    pb.baseUrl = publicBaseUrl;
-  }
-
-  return pb.files.getURL(record, value);
+  return `/api/pocketbase/files?${params.toString()}`;
 }

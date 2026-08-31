@@ -367,13 +367,16 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const records = await pb
-          .collection('products')
-          .getFullList({ sort: '-created' });
+        const response = await fetch('/api/products');
+        if (!response.ok) {
+          throw new Error(`A termékek lekérdezése sikertelen: ${response.status}`);
+        }
 
-        setProducts(records as unknown as ProductRecord[]);
+        const records = (await response.json()) as ProductRecord[];
+        setProducts(records);
       } catch (error) {
         console.error('Hiba a termékek betöltésekor:', error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -383,13 +386,15 @@ export default function HomePage() {
   }, []);
 
   const visibleProducts = useMemo(() => {
-    const source = products.length ? products : fallbackProducts;
-
-    if (selectedCategory === 'all') {
-      return source;
+    if (!products.length) {
+      return [];
     }
 
-    return source.filter((product) => {
+    if (selectedCategory === 'all') {
+      return products;
+    }
+
+    return products.filter((product) => {
       const productCategory = resolveProductCategory(product);
       return productCategory === selectedCategory;
     });
@@ -532,16 +537,20 @@ export default function HomePage() {
             ) : visibleProducts.length === 0 ? (
               <div className="py-24 text-center">
                 <p className="text-lg font-medium">
-                  Jelenleg nincs ilyen kategóriájú termék.
+                  {products.length > 0
+                    ? 'Jelenleg nincs ilyen kategóriájú termék.'
+                    : 'A termékek jelenleg nem érhetők el.'}
                 </p>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory('all')}
-                  className="mt-4 border-b border-[#302d27] pb-1 text-sm"
-                >
-                  Összes termék megtekintése
-                </button>
+                {products.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('all')}
+                    className="mt-4 border-b border-[#302d27] pb-1 text-sm"
+                  >
+                    Összes termék megtekintése
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">

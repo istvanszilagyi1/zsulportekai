@@ -58,7 +58,7 @@ export async function updateOrderRecord(orderId: string, payload: Record<string,
   }
 }
 
-export function getImageUrl(record: any, fileName: string): string {
+export function getImageUrl(record: Record<string, unknown> | null | undefined, fileName: string): string {
   if (!fileName) return '/placeholder.png';
 
   const value = String(fileName).trim();

@@ -28,6 +28,9 @@ export async function GET(request: Request) {
         id: coupon.id,
         code: String(coupon.code || '').toUpperCase(),
         discount_percent: Number(coupon.discount_percent ?? 0),
+        discount_amount: Number(coupon.discount_amount ?? 0),
+        product_id: coupon.product_id ? String(coupon.product_id) : '',
+        product_title: coupon.product_title ? String(coupon.product_title) : '',
         description: coupon.description ?? '',
       },
     });

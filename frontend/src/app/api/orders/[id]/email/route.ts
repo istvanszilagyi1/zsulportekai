@@ -10,13 +10,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const to = String(body?.to || '').trim();
     const subject = String(body?.subject || 'Üzenet a rendeléshez').trim();
     const text = String(body?.text || '').trim();
+    const replyTo = String(body?.replyTo || body?.reply_to || process.env.EMAIL_REPLY_TO || 'zsulportekai@gmail.com').trim();
+    const fromAddress = String(body?.from || process.env.EMAIL_FROM || 'Zsül Portékái <noreply@zsulportekai.hu>').trim();
 
     if (!to || !text) {
       return NextResponse.json({ error: 'Hiányzó címzett vagy levél szöveg.' }, { status: 400 });
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    const fromAddress = process.env.EMAIL_FROM || 'Zsül Portékái <noreply@zsulportekai.hu>';
 
     if (!resendApiKey) {
       return NextResponse.json({ error: 'A küldéshez nincs beállítva a Resend API kulcs.' }, { status: 500 });
@@ -31,6 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       body: JSON.stringify({
         from: fromAddress,
         to: [to],
+        reply_to: replyTo,
         subject,
         text,
         html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #201d1a;"><p>${text.replace(/\n/g, '<br />')}</p></div>`,

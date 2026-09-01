@@ -15,13 +15,8 @@ type FoxpostPickerProps = {
 };
 
 export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
-  const [selected, setSelected] = useState<FoxpostSelection | null>(value ?? null);
-  const [showPicker, setShowPicker] = useState(!value);
-
-  useEffect(() => {
-    setSelected(value ?? null);
-    setShowPicker(!value);
-  }, [value]);
+  const [selected, setSelected] = useState<FoxpostSelection | null>(() => value ?? null);
+  const [showPicker, setShowPicker] = useState<boolean>(() => !value);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {

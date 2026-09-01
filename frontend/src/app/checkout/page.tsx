@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { FormEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -89,6 +90,9 @@ type CouponRecord = {
   id: string;
   code: string;
   discount_percent: number;
+  discount_amount?: number;
+  product_id?: string;
+  product_title?: string;
   active?: boolean;
   description?: string;
 };
@@ -150,11 +154,35 @@ export default function CheckoutPage() {
   const [error, setError] = useState('');
 
   const shippingCost = DELIVERY_FEES[deliveryMethod];
-  const couponRate = appliedCoupon ? Number(appliedCoupon.discount_percent || 0) / 100 : 0;
-  const couponDiscount = useMemo(
-    () => Math.round(totalPrice * couponRate),
-    [totalPrice, couponRate],
-  );
+  const couponDiscount = useMemo(() => {
+    if (!appliedCoupon) {
+      return 0;
+    }
+
+    if (appliedCoupon.product_id) {
+      const matchingProductTotal = cart.reduce((sum, { product, quantity }) => {
+        if (product.id === appliedCoupon.product_id) {
+          return sum + Number(product.price ?? 0) * quantity;
+        }
+        return sum;
+      }, 0);
+
+      if (!matchingProductTotal) {
+        return 0;
+      }
+
+      const percentDiscount = appliedCoupon.discount_percent
+        ? Math.round(matchingProductTotal * (Number(appliedCoupon.discount_percent || 0) / 100))
+        : 0;
+      const fixedDiscount = appliedCoupon.discount_amount
+        ? Math.round(Number(appliedCoupon.discount_amount || 0))
+        : 0;
+
+      return Math.min(matchingProductTotal, percentDiscount + fixedDiscount);
+    }
+
+    return Math.round(totalPrice * (Number(appliedCoupon.discount_percent || 0) / 100));
+  }, [appliedCoupon, cart, totalPrice]);
   const subtotalAfterDiscount = Math.max(0, totalPrice - couponDiscount);
   const orderTotal = useMemo(() => Math.round(subtotalAfterDiscount + shippingCost), [subtotalAfterDiscount, shippingCost]);
 
@@ -182,6 +210,12 @@ export default function CheckoutPage() {
       if (!response.ok || !payload?.valid || !payload?.coupon) {
         setAppliedCoupon(null);
         setCouponError(payload?.error || 'Érvénytelen kuponkód.');
+        return;
+      }
+
+      if (payload.coupon.product_id && !cart.some((item) => item.product.id === payload.coupon.product_id)) {
+        setAppliedCoupon(null);
+        setCouponError('Ez a kupon a kosárban lévő termékre nem alkalmazható.');
         return;
       }
 
@@ -275,6 +309,8 @@ export default function CheckoutPage() {
         coupon_code: appliedCoupon?.code || undefined,
         coupon_discount_percent: appliedCoupon ? Number(appliedCoupon.discount_percent || 0) : undefined,
         coupon_discount_amount: appliedCoupon ? Math.round(couponDiscount) : undefined,
+        coupon_product_id: appliedCoupon?.product_id || undefined,
+        coupon_product_title: appliedCoupon?.product_title || undefined,
         items: cart.map(({ product, quantity }) => ({
           id: product.id,
           title: product.title,
@@ -299,11 +335,7 @@ export default function CheckoutPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...payload,
-          payment_status: 'pending',
-          status: 'pending',
-        }),
+        body: JSON.stringify(payload),
       });
 
       const responseBody = await response.json();
@@ -377,13 +409,13 @@ export default function CheckoutPage() {
               Válassz néhány természetes alapanyagot, majd térj vissza a pénztárhoz.
             </p>
 
-            <a
+            <Link
               href="/"
               className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#2d2922] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1b1915]"
             >
               Vissza a főoldalra
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         </main>
       </div>

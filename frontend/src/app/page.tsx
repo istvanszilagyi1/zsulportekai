@@ -18,7 +18,7 @@ import { useCart } from '@/context/CartContext';
 import { pb, getImageUrl } from '@/lib/pocketbase';
 import type { Product } from '@/types';
 
-type CategoryFilter = 'all' | 'olajok' | 'szorpok' | 'lisztek';
+type CategoryFilter = 'all' | 'olajok' | 'gyumolcslevek' | 'lisztek';
 
 type ProductRecord = Product & {
   category?: string;
@@ -79,7 +79,7 @@ const galleryImages = [
 const categoryLabels: Record<CategoryFilter, string> = {
   all: 'Minden termék',
   olajok: 'Hidegen sajtolt olajok',
-  szorpok: 'Szörpök & gyümölcslevek',
+  gyumolcslevek: 'Gyümölcslé',
   lisztek: 'Lisztek & hüvelyesek',
 };
 
@@ -92,7 +92,7 @@ const testimonials = [
   {
     name: 'András',
     quote:
-      'A berkenye szörp a kedvencünk. Gyümölcsös, természetes és olyan, mintha a kertünkben készült volna.',
+      'A berkenye gyümölcslé a kedvencünk. Gyümölcsös, természetes és olyan, mintha a kertünkben készült volna.',
   },
   {
     name: 'Eszter',
@@ -122,12 +122,12 @@ const fallbackProducts: ProductRecord[] = [
   },
   {
     id: 'fallback-3',
-    title: 'Homoktövis szörp',
+    title: 'Homoktövis gyümölcslé',
     price: 2490,
     description:
       'Friss, aromás és természetes ízű gyümölcslé, gondosan elkészítve.',
     image: syrupImage,
-    category: 'szorpok',
+    category: 'gyumolcslevek',
   },
   {
     id: 'fallback-4',
@@ -144,13 +144,14 @@ function inferProductCategory(value: string): CategoryFilter {
   const lower = value.toLowerCase();
 
   if (
-    lower.includes('szörp') ||
-    lower.includes('szorp') ||
     lower.includes('berkenye') ||
     lower.includes('homoktövis') ||
-    lower.includes('gyümölcs')
+    lower.includes('gyümölcs') ||
+    lower.includes('gyumolcs') ||
+    lower.includes('gyümölcslé') ||
+    lower.includes('gyumolcsle')
   ) {
-    return 'szorpok';
+    return 'gyumolcslevek';
   }
 
   if (
@@ -184,7 +185,14 @@ function inferProductCategory(value: string): CategoryFilter {
 function resolveProductCategory(product: Partial<ProductRecord>): CategoryFilter {
   const rawCategory = (product.category ?? '').trim().toLowerCase();
 
-  if (rawCategory.includes('szörp') || rawCategory.includes('szorp')) return 'szorpok';
+  if (
+    rawCategory.includes('gyümölcslé') ||
+    rawCategory.includes('gyumolcsle') ||
+    rawCategory.includes('gyümölcs') ||
+    rawCategory.includes('gyumolcs')
+  ) {
+    return 'gyumolcslevek';
+  }
   if (rawCategory.includes('liszt')) return 'lisztek';
   if (rawCategory.includes('olaj')) return 'olajok';
 
@@ -347,7 +355,7 @@ function formatProductDescriptionHtml(value?: string) {
 
 function categoryName(category: CategoryFilter) {
   if (category === 'olajok') return 'Olajok';
-  if (category === 'szorpok') return 'Szörpök';
+  if (category === 'gyumolcslevek') return 'Gyümölcslé';
   if (category === 'lisztek') return 'Lisztek & hüvelyesek';
   return 'Termék';
 }
@@ -469,7 +477,7 @@ export default function HomePage() {
                 <p className="max-w-md text-sm leading-6 text-white/80 sm:text-base">
                   Hajdúböszörményi családi gazdaságunkból származó alapanyagokból
                   készítünk hidegen sajtolt olajokat, kézműves liszteket és
-                  házi szörpöket.
+                  házi gyümölcsleveket.
                 </p>
 
                 <a
@@ -920,7 +928,7 @@ export default function HomePage() {
           <div className="group relative h-[620px] sm:h-[720px] lg:h-[820px]">
             <img
               src={syrupImage}
-              alt="Házi szörpök és gyümölcsök"
+              alt="Házi gyümölcslevek és gyümölcsök"
               className="absolute inset-0 h-full w-full object-cover transition duration-1000 group-hover:scale-[1.02]"
             />
 
@@ -1031,8 +1039,8 @@ export default function HomePage() {
                       </h3>
 
                       <p className="mt-2 max-w-xl text-sm leading-6 text-[#777166]">
-                        Házi szörpök, gyümölcslevek és kézműves termékek olyan
-                        receptek alapján, amelyekben az alapanyag a főszereplő.
+                        Házi gyümölcslevek és kézműves termékek olyan receptek
+                        alapján, amelyekben az alapanyag a főszereplő.
                       </p>
                     </div>
                   </div>
@@ -1284,7 +1292,10 @@ export default function HomePage() {
           <div className="mt-16 flex flex-col gap-3 border-t border-white/10 pt-6 text-[11px] text-white/35 sm:flex-row sm:items-center sm:justify-between">
             <p>© 2026 Zsül Portékái. Minden jog fenntartva.</p>
 
-            <p>Hajdúböszörmény · Magyarország</p>
+            <div className="flex flex-col gap-1 text-right sm:items-end">
+              <p>Hajdúböszörmény · Magyarország</p>
+              <p>Kistermelői reg. szám: 08-05-T-297</p>
+            </div>
           </div>
         </div>
       </footer>

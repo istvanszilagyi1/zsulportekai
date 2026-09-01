@@ -11,7 +11,6 @@ import {
   LogOut,
   MailCheck,
   Search,
-  Truck,
   X,
 } from 'lucide-react';
 import Header from '@/components/Header';
@@ -78,6 +77,9 @@ type CouponRecord = {
   id: string;
   code: string;
   discount_percent: number;
+  discount_amount?: number;
+  product_id?: string;
+  product_title?: string;
   active?: boolean;
   description?: string;
   created?: string;
@@ -207,15 +209,29 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(pb.authStore.isValid && pb.authStore.model));
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'coupons'>('orders');
-  const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([]);
+  const [savedEmailLog, setSavedEmailLog] = useState<EmailLogEntry[]>(() => {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    try {
+      const raw = localStorage.getItem('zsulportekai-email-log');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const [coupons, setCoupons] = useState<CouponRecord[]>([]);
   const [couponForm, setCouponForm] = useState({
     id: '',
     code: '',
     discount_percent: 10,
+    discount_amount: 0,
+    product_id: '',
+    product_title: '',
     active: true,
     description: '',
   });
@@ -282,30 +298,19 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    const authenticated = Boolean(pb.authStore.isValid && pb.authStore.model);
-    setIsAuthenticated(authenticated);
-
-    if (authenticated) {
-      fetchOrders();
-      fetchCoupons();
-      const savedLog = localStorage.getItem('zsulportekai-email-log');
-      if (savedLog) {
-        try {
-          setEmailLog(JSON.parse(savedLog));
-        } catch {
-          setEmailLog([]);
-        }
-      }
+    if (!isAuthenticated) {
       return;
     }
 
-    setLoading(false);
-  }, []);
+    // This runs only after the admin session becomes valid, so it is a deliberate
+    // auth-driven sync point rather than a cascading render loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchOrders();
+    fetchCoupons();
+  }, [isAuthenticated]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const generatedLog: EmailLogEntry[] = orders.flatMap((order) => {
+  const generatedEmailLog = useMemo<EmailLogEntry[]>(() => {
+    return orders.flatMap((order) => {
       const customerName = buildFullName(order.customer_first_name, order.customer_last_name) || order.customer_name;
       const base: EmailLogEntry[] = [
         {
@@ -348,16 +353,20 @@ export default function AdminPage() {
 
       return base;
     });
+  }, [orders]);
 
-    setEmailLog((previous) => {
-      const merged = [...generatedLog, ...previous];
-      const unique = new Map<string, EmailLogEntry>();
-      merged.forEach((entry) => unique.set(entry.id, entry));
-      const nextEntries = Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
-      localStorage.setItem('zsulportekai-email-log', JSON.stringify(nextEntries));
-      return nextEntries.slice(0, 30);
-    });
-  }, [orders, isAuthenticated]);
+  const emailLog = useMemo<EmailLogEntry[]>(() => {
+    const merged = [...generatedEmailLog, ...savedEmailLog];
+    const unique = new Map<string, EmailLogEntry>();
+    merged.forEach((entry) => unique.set(entry.id, entry));
+    return Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()).slice(0, 60);
+  }, [generatedEmailLog, savedEmailLog]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zsulportekai-email-log', JSON.stringify(emailLog));
+    }
+  }, [emailLog]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -405,6 +414,16 @@ export default function AdminPage() {
         payment_status: nextPaymentStatus,
       });
 
+      const emailStatus = nextStatus === 'cancelled' || nextStatus === 'refunded' ? 'cancelled' : nextStatus;
+      await fetch('/api/orders/email-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          status: emailStatus,
+        }),
+      }).catch(() => undefined);
+
       setOrders((current) =>
         current.map((order) => (order.id === orderId ? { ...order, ...updatedOrder, status: nextStatus, payment_status: nextPaymentStatus } : order)),
       );
@@ -448,15 +467,26 @@ export default function AdminPage() {
     event.preventDefault();
 
     const normalizedCode = couponForm.code.trim().toUpperCase();
-    if (!normalizedCode || couponForm.discount_percent <= 0 || couponForm.discount_percent > 100) {
-      window.alert('A kupon kód és az engedmény százalék érvényes értéket kell, hogy kapjon.');
+    const hasPercentDiscount = Number(couponForm.discount_percent ?? 0) > 0;
+    const hasFixedDiscount = Number(couponForm.discount_amount ?? 0) > 0;
+
+    if (!normalizedCode || (!hasPercentDiscount && !hasFixedDiscount)) {
+      window.alert('A kupon kód és legalább egy érvényes kedvezmény érték kötelező.');
+      return;
+    }
+
+    if (hasPercentDiscount && (couponForm.discount_percent <= 0 || couponForm.discount_percent > 100)) {
+      window.alert('A százalékos kedvezmény 1 és 100 közötti érték legyen.');
       return;
     }
 
     try {
       const payload = {
         code: normalizedCode,
-        discount_percent: Number(couponForm.discount_percent),
+        discount_percent: Number(couponForm.discount_percent ?? 0),
+        discount_amount: Number(couponForm.discount_amount ?? 0),
+        product_id: couponForm.product_id.trim(),
+        product_title: couponForm.product_title.trim(),
         active: Boolean(couponForm.active),
         description: couponForm.description.trim(),
       };
@@ -467,7 +497,7 @@ export default function AdminPage() {
         await pb.collection('coupons').create(payload);
       }
 
-      setCouponForm({ id: '', code: '', discount_percent: 10, active: true, description: '' });
+      setCouponForm({ id: '', code: '', discount_percent: 10, discount_amount: 0, product_id: '', product_title: '', active: true, description: '' });
       await fetchCoupons();
     } catch (error) {
       console.error('Kupon mentése sikertelen:', error);
@@ -480,6 +510,9 @@ export default function AdminPage() {
       id: coupon.id,
       code: coupon.code,
       discount_percent: Number(coupon.discount_percent ?? 0),
+      discount_amount: Number(coupon.discount_amount ?? 0),
+      product_id: coupon.product_id ?? '',
+      product_title: coupon.product_title ?? '',
       active: Boolean(coupon.active),
       description: coupon.description ?? '',
     });
@@ -496,7 +529,7 @@ export default function AdminPage() {
       await pb.collection('coupons').delete(couponId);
       setCoupons((current) => current.filter((item) => item.id !== couponId));
       if (couponForm.id === couponId) {
-        setCouponForm({ id: '', code: '', discount_percent: 10, active: true, description: '' });
+        setCouponForm({ id: '', code: '', discount_percent: 10, discount_amount: 0, product_id: '', product_title: '', active: true, description: '' });
       }
     } catch (error) {
       console.error('Kupon törlése sikertelen:', error);
@@ -590,7 +623,8 @@ export default function AdminPage() {
           to: selectedOrder.customer_email,
           subject: replySubject.trim() || `Üzenet a megrendeléshez (#${selectedOrder.id})`,
           text: replyBody.trim(),
-          from: 'Zsül Portékái admin',
+          from: 'Zsül Portékái admin <noreply@zsulportekai.hu>',
+          replyTo: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'zsulportekai@gmail.com',
         }),
       });
 
@@ -611,13 +645,11 @@ export default function AdminPage() {
         from: 'Zsül Portékái admin',
       };
 
-      setEmailLog((current) => {
+      setSavedEmailLog((current) => {
         const merged = [sentEntry, ...current];
         const unique = new Map<string, EmailLogEntry>();
         merged.forEach((entry) => unique.set(entry.id, entry));
-        const nextEntries = Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
-        localStorage.setItem('zsulportekai-email-log', JSON.stringify(nextEntries));
-        return nextEntries.slice(0, 60);
+        return Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()).slice(0, 60);
       });
 
       setReplySubject('');

@@ -350,7 +350,7 @@ export async function sendOrderEmails(order: OrderEmailInput) {
   };
 }
 
-export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled') {
+export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled') {
   const customerEmail = order.customer_email;
   if (!customerEmail) {
     return { sent: false, reason: 'missing_customer_email' };
@@ -366,6 +366,11 @@ export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pend
       label: 'A fizetés visszaigazolva',
       intro: 'A fizetésedet sikeresen ellenőriztük. A rendelésedet továbbítjuk a feldolgozásra.',
       subject: `A fizetés visszaigazolva – ${BRAND_NAME}`,
+    },
+    processing: {
+      label: 'A rendelés feldolgozás alatt van',
+      intro: 'A rendelésedet már feldolgozzuk. A következő frissítést hamarosan elküldjük e-mailben.',
+      subject: `A rendelés feldolgozás alatt – ${BRAND_NAME}`,
     },
     shipped: {
       label: 'A rendelését kiszállításra került',

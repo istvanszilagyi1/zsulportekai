@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, Home, Landmark } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -100,13 +101,13 @@ function OrderSuccessContent() {
         </div>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center justify-center gap-3 rounded-full bg-[#2d2922] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1f1b17]"
           >
             Vissza a főoldalra
             <Home className="h-4 w-4" />
-          </a>
+          </Link>
 
           <a
             href="#products"

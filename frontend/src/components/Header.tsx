@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
@@ -64,7 +65,7 @@ export default function Header() {
         }`}
       >
         <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-6 sm:px-10 lg:px-12">
-          <a
+          <Link
             href="/"
             aria-label="Zsül Portékái kezdőlap"
             className="group relative flex h-full items-center gap-2 py-2 transition-transform duration-300"
@@ -86,7 +87,7 @@ export default function Header() {
             <span className="text-base font-semibold tracking-[-0.04em] text-[#2d2922] sm:text-lg">
               Zsül Portékái
             </span>
-          </a>
+          </Link>
 
           {/* Navigáció */}
           <nav className="hidden items-center gap-8 lg:flex">
@@ -211,7 +212,7 @@ export default function Header() {
                 Üres a kosarad
               </p>
               <p className="mt-1 text-xs text-[#706b62]">
-                Válogass kistermelői olajaink és szörpjeink közül!
+                Válogass kistermelői olajaink és gyümölcsleveink közül!
               </p>
             </div>
           ) : (

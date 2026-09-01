@@ -16,28 +16,23 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Kosár betöltése localStorage-ból indításkor
-  useEffect(() => {
-    const savedCart = localStorage.getItem('zsul_cart');
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (e) {
-        console.error('Nem sikerült beolvasni a kosarat', e);
-      }
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') {
+      return [];
     }
-    setIsLoaded(true);
-  }, []);
 
-  // Mentés localStorage-ba minden változáskor
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('zsul_cart', JSON.stringify(cart));
+    try {
+      const savedCart = localStorage.getItem('zsul_cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (e) {
+      console.error('Nem sikerült beolvasni a kosarat', e);
+      return [];
     }
-  }, [cart, isLoaded]);
+  });
+
+  useEffect(() => {
+    localStorage.setItem('zsul_cart', JSON.stringify(cart));
+  }, [cart]);
 
   const addToCart = (product: Product) => {
     setCart((prev) => {

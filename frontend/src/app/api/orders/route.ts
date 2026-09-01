@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       foxpost_place_address: body.foxpost_place_address ? String(body.foxpost_place_address).trim() : undefined,
       shipping_address: body.shipping_address ? String(body.shipping_address).trim() : undefined,
       total_price: Number(body.total_price ?? 0),
-      status: body.status === 'paid' ? 'paid' : 'pending',
+      status: body.status === 'paid' || body.status === 'processing' || body.status === 'completed' ? body.status : 'pending',
       items: Array.isArray(body.items) ? body.items : [],
     };
 

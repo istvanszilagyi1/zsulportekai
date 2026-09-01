@@ -58,7 +58,16 @@ export async function updateOrderRecord(orderId: string, payload: Record<string,
   }
 }
 
-export function getImageUrl(record: Record<string, unknown> | null | undefined, fileName: string): string {
+type PocketBaseFileRecord = {
+  id?: string | number;
+  collectionId?: string | number;
+  collection_id?: string | number;
+};
+
+export function getImageUrl(
+  record: object | null | undefined,
+  fileName: string | null | undefined,
+): string {
   if (!fileName) return '/placeholder.png';
 
   const value = String(fileName).trim();
@@ -67,18 +76,22 @@ export function getImageUrl(record: Record<string, unknown> | null | undefined, 
     return value;
   }
 
+  const recordLike = record as Partial<PocketBaseFileRecord> | null | undefined;
   const publicBaseUrl = getPublicPocketBaseUrl();
-  const collectionId = record?.collectionId ?? record?.collection_id ?? 'unknown';
-  const recordId = record?.id ?? 'unknown';
+  const collectionId = recordLike?.collectionId ?? recordLike?.collection_id ?? 'unknown';
+  const recordId = recordLike?.id ?? 'unknown';
+
+  const safeCollectionId = String(collectionId);
+  const safeRecordId = String(recordId);
 
   if (publicBaseUrl && /^(https?:)?\/\//i.test(publicBaseUrl)) {
     const normalizedBase = publicBaseUrl.replace(/\/+$/, '');
-    return `${normalizedBase}/api/files/${encodeURIComponent(collectionId)}/${encodeURIComponent(recordId)}/${encodeURIComponent(value)}`;
+    return `${normalizedBase}/api/files/${encodeURIComponent(safeCollectionId)}/${encodeURIComponent(safeRecordId)}/${encodeURIComponent(value)}`;
   }
 
   const params = new URLSearchParams({
-    collectionId,
-    recordId,
+    collectionId: safeCollectionId,
+    recordId: safeRecordId,
     fileName: value,
   });
 

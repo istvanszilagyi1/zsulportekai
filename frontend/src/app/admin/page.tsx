@@ -476,13 +476,29 @@ export default function AdminPage() {
 
       const refreshedOrder = await pb.collection('orders').getOne(orderId).catch(() => null);
       const emailStatus = nextStatus === 'cancelled' || nextStatus === 'refunded' ? 'cancelled' : nextStatus;
+      const emailPayload = {
+        orderId,
+        status: emailStatus,
+        order: {
+          id: targetOrder.id,
+          customer_name: targetOrder.customer_name,
+          customer_first_name: targetOrder.customer_first_name,
+          customer_last_name: targetOrder.customer_last_name,
+          customer_email: targetOrder.customer_email,
+          delivery_method: targetOrder.delivery_method,
+          payment_method: targetOrder.payment_method,
+          total_price: Number(targetOrder.total_price ?? 0),
+          items: Array.isArray(targetOrder.items) ? targetOrder.items : [],
+          foxpost_place_name: targetOrder.foxpost_place_name,
+          foxpost_place_address: targetOrder.foxpost_place_address,
+          shipping_address: targetOrder.shipping_address,
+          status: nextStatus,
+        },
+      };
       await fetch('/api/orders/email-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId,
-          status: emailStatus,
-        }),
+        body: JSON.stringify(emailPayload),
       }).catch(() => undefined);
 
       if (refreshedOrder) {
@@ -540,28 +556,29 @@ export default function AdminPage() {
 
     const normalizedCode = couponForm.code.trim().toUpperCase();
     const hasPercentDiscount = Number(couponForm.discount_percent ?? 0) > 0;
-    const hasFixedDiscount = Number(couponForm.discount_amount ?? 0) > 0;
 
-    if (!normalizedCode || (!hasPercentDiscount && !hasFixedDiscount)) {
-      window.alert('A kupon kód és legalább egy érvényes kedvezmény érték kötelező.');
+    if (!normalizedCode || !hasPercentDiscount) {
+      window.alert('A kupon kód és a százalékos kedvezmény kötelező.');
       return;
     }
 
-    if (hasPercentDiscount && (couponForm.discount_percent <= 0 || couponForm.discount_percent > 100)) {
+    if (couponForm.discount_percent <= 0 || couponForm.discount_percent > 100) {
       window.alert('A százalékos kedvezmény 1 és 100 közötti érték legyen.');
       return;
     }
 
     if (couponForm.product_id && !couponForm.product_title.trim()) {
-      window.alert('Termékspecifikus kuponhoz a termék nevének megadása is kötelező.');
-      return;
+      const selectedProduct = productsForAdmin.find((product) => product.id === couponForm.product_id);
+      if (selectedProduct) {
+        setCouponForm((current) => ({ ...current, product_title: selectedProduct.title }));
+      }
     }
 
     try {
       const payload = {
         code: normalizedCode,
         discount_percent: Number(couponForm.discount_percent ?? 0),
-        discount_amount: Number(couponForm.discount_amount ?? 0),
+        discount_amount: 0,
         product_id: couponForm.product_id.trim(),
         product_title: couponForm.product_title.trim(),
         active: Boolean(couponForm.active),
@@ -583,13 +600,14 @@ export default function AdminPage() {
   };
 
   const handleEditCoupon = (coupon: CouponRecord) => {
+    const matchedProduct = coupon.product_id ? productsForAdmin.find((product) => product.id === coupon.product_id) : undefined;
     setCouponForm({
       id: coupon.id,
       code: coupon.code,
       discount_percent: Number(coupon.discount_percent ?? 0),
-      discount_amount: Number(coupon.discount_amount ?? 0),
+      discount_amount: 0,
       product_id: coupon.product_id ?? '',
-      product_title: coupon.product_title ?? '',
+      product_title: coupon.product_title ?? matchedProduct?.title ?? '',
       active: Boolean(coupon.active),
       description: coupon.description ?? '',
     });
@@ -698,6 +716,21 @@ export default function AdminPage() {
           body: JSON.stringify({
             orderId: editingOrder.id,
             status: emailStatus,
+            order: {
+              id: editingOrder.id,
+              customer_name: editingOrder.customer_name,
+              customer_first_name: editingOrder.customer_first_name,
+              customer_last_name: editingOrder.customer_last_name,
+              customer_email: editingOrder.customer_email,
+              delivery_method: editingOrder.delivery_method,
+              payment_method: editingOrder.payment_method,
+              total_price: Number(editingOrder.total_price ?? 0),
+              items: Array.isArray(editingOrder.items) ? editingOrder.items : [],
+              foxpost_place_name: editingOrder.foxpost_place_name,
+              foxpost_place_address: editingOrder.foxpost_place_address,
+              shipping_address: editingOrder.shipping_address,
+              status: normalized.status,
+            },
           }),
         }).catch(() => undefined);
       }
@@ -1293,24 +1326,24 @@ export default function AdminPage() {
               </label>
 
               <label className="block xl:col-span-1">
-                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Fix leárazás (Ft)</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={couponForm.discount_amount}
-                  onChange={(event) => setCouponForm((current) => ({ ...current, discount_amount: Number(event.target.value) }))}
-                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
-                />
-              </label>
-
-              <label className="block xl:col-span-1">
-                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék ID</span>
-                <input
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék (opcionális)</span>
+                <select
                   value={couponForm.product_id}
-                  onChange={(event) => setCouponForm((current) => ({ ...current, product_id: event.target.value }))}
-                  placeholder="termek-id"
+                  onChange={(event) => {
+                    const selected = productsForAdmin.find((product) => product.id === event.target.value);
+                    setCouponForm((current) => ({
+                      ...current,
+                      product_id: event.target.value,
+                      product_title: selected ? selected.title : '',
+                    }));
+                  }}
                   className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
-                />
+                >
+                  <option value="">Minden termék</option>
+                  {productsForAdmin.map((product) => (
+                    <option key={product.id} value={product.id}>{product.title}</option>
+                  ))}
+                </select>
               </label>
 
               <label className="block xl:col-span-1">
@@ -1436,8 +1469,7 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <div className="space-y-2 text-sm text-[#4c453d]">
-                      <div><span className="font-medium text-[#2d2922]">Kedvezmény:</span> {coupon.discount_percent ? `${coupon.discount_percent}%` : `${coupon.discount_amount ?? 0} Ft`}</div>
-                      {coupon.discount_amount ? <div><span className="font-medium text-[#2d2922]">Fix összeg:</span> {coupon.discount_amount} Ft</div> : null}
+                      <div><span className="font-medium text-[#2d2922]">Kedvezmény:</span> {coupon.discount_percent}%</div>
                       {coupon.product_id ? <div><span className="font-medium text-[#2d2922]">Termék:</span> {coupon.product_title || coupon.product_id}</div> : null}
                       <div><span className="font-medium text-[#2d2922]">Leírás:</span> {coupon.description || 'Nincs megadva'}</div>
                     </div>

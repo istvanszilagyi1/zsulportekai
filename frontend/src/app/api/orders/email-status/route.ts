@@ -7,13 +7,30 @@ export async function POST(request: Request) {
     const body = await request.json();
     const orderId = String(body?.orderId || '').trim();
     const status = String(body?.status || 'pending');
+    const orderPayload = body?.order && typeof body.order === 'object' ? body.order : null;
 
     if (!orderId) {
       return NextResponse.json({ error: 'Hiányzó rendelés azonosító.' }, { status: 400 });
     }
 
     const adminPb = await getAdminPocketBaseClient();
-    const order = adminPb ? await adminPb.collection('orders').getOne(orderId).catch(() => null) : null;
+    const order = orderPayload
+      ? {
+          id: orderPayload.id ?? orderId,
+          customer_name: orderPayload.customer_name ?? '',
+          customer_first_name: orderPayload.customer_first_name ?? undefined,
+          customer_last_name: orderPayload.customer_last_name ?? undefined,
+          customer_email: orderPayload.customer_email ?? '',
+          delivery_method: orderPayload.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
+          payment_method: orderPayload.payment_method === 'stripe' ? 'stripe' : 'bank_transfer',
+          total_price: Number(orderPayload.total_price ?? 0),
+          items: Array.isArray(orderPayload.items) ? orderPayload.items : [],
+          foxpost_place_name: orderPayload.foxpost_place_name ? String(orderPayload.foxpost_place_name) : undefined,
+          foxpost_place_address: orderPayload.foxpost_place_address ? String(orderPayload.foxpost_place_address) : undefined,
+          shipping_address: orderPayload.shipping_address ? String(orderPayload.shipping_address) : undefined,
+        }
+      : adminPb ? await adminPb.collection('orders').getOne(orderId).catch(() => null) : null;
+
     if (!order) {
       return NextResponse.json({ ok: true, skipped: true }, { status: 200 });
     }

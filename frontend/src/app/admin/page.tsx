@@ -551,6 +551,8 @@ export default function AdminPage() {
     }
   };
 
+  const normalizeProductId = (value?: string | number | null) => String(value ?? '').trim();
+
   const handleSaveCoupon = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -567,8 +569,10 @@ export default function AdminPage() {
       return;
     }
 
-    if (couponForm.product_id && !couponForm.product_title.trim()) {
-      const selectedProduct = productsForAdmin.find((product) => product.id === couponForm.product_id);
+    const normalizedProductId = normalizeProductId(couponForm.product_id);
+
+    if (normalizedProductId && !couponForm.product_title.trim()) {
+      const selectedProduct = productsForAdmin.find((product) => normalizeProductId(product.id) === normalizedProductId);
       if (selectedProduct) {
         setCouponForm((current) => ({ ...current, product_title: selectedProduct.title }));
       }
@@ -579,7 +583,7 @@ export default function AdminPage() {
         code: normalizedCode,
         discount_percent: Number(couponForm.discount_percent ?? 0),
         discount_amount: 0,
-        product_id: couponForm.product_id.trim(),
+        product_id: normalizedProductId,
         product_title: couponForm.product_title.trim(),
         active: Boolean(couponForm.active),
         description: couponForm.description.trim(),
@@ -600,13 +604,14 @@ export default function AdminPage() {
   };
 
   const handleEditCoupon = (coupon: CouponRecord) => {
-    const matchedProduct = coupon.product_id ? productsForAdmin.find((product) => product.id === coupon.product_id) : undefined;
+    const normalizedProductId = normalizeProductId(coupon.product_id);
+    const matchedProduct = normalizedProductId ? productsForAdmin.find((product) => normalizeProductId(product.id) === normalizedProductId) : undefined;
     setCouponForm({
       id: coupon.id,
       code: coupon.code,
       discount_percent: Number(coupon.discount_percent ?? 0),
       discount_amount: 0,
-      product_id: coupon.product_id ?? '',
+      product_id: normalizedProductId,
       product_title: coupon.product_title ?? matchedProduct?.title ?? '',
       active: Boolean(coupon.active),
       description: coupon.description ?? '',
@@ -633,7 +638,8 @@ export default function AdminPage() {
   };
 
   const handleSaveProduct = async () => {
-    const selectedProduct = productsForAdmin.find((product) => product.id === productForm.product_id);
+    const normalizedProductId = normalizeProductId(productForm.product_id);
+    const selectedProduct = productsForAdmin.find((product) => normalizeProductId(product.id) === normalizedProductId);
     if (!selectedProduct) {
       window.alert('Előbb válassz ki egy terméket a lista közül.');
       return;
@@ -1330,10 +1336,11 @@ export default function AdminPage() {
                 <select
                   value={couponForm.product_id}
                   onChange={(event) => {
-                    const selected = productsForAdmin.find((product) => product.id === event.target.value);
+                    const productId = normalizeProductId(event.target.value);
+                    const selected = productsForAdmin.find((product) => normalizeProductId(product.id) === productId);
                     setCouponForm((current) => ({
                       ...current,
-                      product_id: event.target.value,
+                      product_id: productId,
                       product_title: selected ? selected.title : '',
                     }));
                   }}
@@ -1392,10 +1399,11 @@ export default function AdminPage() {
                 <select
                   value={productForm.product_id}
                   onChange={(event) => {
-                    const selected = productsForAdmin.find((product) => product.id === event.target.value);
+                    const productId = normalizeProductId(event.target.value);
+                    const selected = productsForAdmin.find((product) => normalizeProductId(product.id) === productId);
                     setProductForm((current) => ({
                       ...current,
-                      product_id: event.target.value,
+                      product_id: productId,
                       product_title: selected?.title ?? current.product_title,
                       sale_price: selected ? Number(selected.sale_price ?? 0) : current.sale_price,
                       is_out_of_stock: selected ? Boolean(selected.is_out_of_stock) : current.is_out_of_stock,

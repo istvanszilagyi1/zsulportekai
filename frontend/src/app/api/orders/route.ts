@@ -63,7 +63,20 @@ export async function POST(request: Request) {
 
     const createdOrder = await pb.collection('orders').create(orderPayload as Record<string, unknown>);
 
-    const emailPayload = {
+    const emailPayload: {
+      id: string;
+      customer_name: string;
+      customer_first_name?: string;
+      customer_last_name?: string;
+      customer_email?: string;
+      delivery_method: 'foxpost' | 'home_delivery';
+      payment_method: 'stripe' | 'bank_transfer';
+      total_price: number;
+      items: Array<Record<string, unknown>>;
+      foxpost_place_name?: string;
+      foxpost_place_address?: string;
+      shipping_address?: string;
+    } = {
       id: String(createdOrder.id),
       customer_name: typeof orderPayload.customer_name === 'string' ? orderPayload.customer_name : String(orderPayload.customer_name ?? ''),
       customer_first_name: typeof orderPayload.customer_first_name === 'string' ? orderPayload.customer_first_name : undefined,
@@ -72,11 +85,11 @@ export async function POST(request: Request) {
       delivery_method: orderPayload.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
       payment_method: orderPayload.payment_method === 'stripe' ? 'stripe' : 'bank_transfer',
       total_price: typeof orderPayload.total_price === 'number' ? orderPayload.total_price : Number(orderPayload.total_price ?? 0),
-      items: Array.isArray(orderPayload.items) ? orderPayload.items : [],
+      items: Array.isArray(orderPayload.items) ? (orderPayload.items as Array<Record<string, unknown>>) : [],
       foxpost_place_name: typeof orderPayload.foxpost_place_name === 'string' ? orderPayload.foxpost_place_name : undefined,
       foxpost_place_address: typeof orderPayload.foxpost_place_address === 'string' ? orderPayload.foxpost_place_address : undefined,
       shipping_address: typeof orderPayload.shipping_address === 'string' ? orderPayload.shipping_address : undefined,
-    } as any;
+    };
 
     try {
       await sendOrderEmails(emailPayload);

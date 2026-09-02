@@ -3,6 +3,23 @@ import { sendOrderStatusEmail } from '@/lib/email';
 import { stripe } from '@/lib/stripe';
 import { updateOrderRecord } from '@/lib/pocketbase';
 
+type StripeSessionLike = {
+  payment_status?: string | null;
+  status?: string | null;
+  payment_intent?: { status?: string | null } | string | null;
+};
+
+const isStripeSessionPaid = (session: StripeSessionLike) => {
+  const paymentIntentStatus = typeof session.payment_intent === 'object' && session.payment_intent && 'status' in session.payment_intent
+    ? String(session.payment_intent.status ?? '')
+    : '';
+
+  return session.payment_status === 'paid'
+    || session.status === 'complete'
+    || paymentIntentStatus === 'succeeded'
+    || paymentIntentStatus === 'paid';
+};
+
 export async function GET(request: Request) {
   try {
     if (!stripe) {
@@ -21,7 +38,7 @@ export async function GET(request: Request) {
       expand: ['payment_intent'],
     });
 
-    const isPaid = session.payment_status === 'paid' || session.status === 'complete';
+    const isPaid = isStripeSessionPaid(session);
 
     if (isPaid) {
       const order = await updateOrderRecord(orderId, {

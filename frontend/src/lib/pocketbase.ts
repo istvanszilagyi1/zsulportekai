@@ -44,10 +44,11 @@ const pocketbaseUrl = getPocketBaseBaseUrl();
 export const pb = new PocketBase(pocketbaseUrl);
 
 export async function getAdminPocketBaseClient() {
-  const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL || process.env.POCKETBASE_EMAIL || process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD || process.env.POCKETBASE_PASSWORD || process.env.ADMIN_PASSWORD;
+  const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL || process.env.POCKETBASE_EMAIL || process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD || process.env.POCKETBASE_PASSWORD || process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
   if (!adminEmail || !adminPassword) {
+    console.warn('PocketBase admin credentials are missing; Stripe verification and admin updates will be skipped until the env vars are configured.');
     return null;
   }
 

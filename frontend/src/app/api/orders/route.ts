@@ -78,7 +78,11 @@ export async function POST(request: Request) {
       shipping_address: typeof orderPayload.shipping_address === 'string' ? orderPayload.shipping_address : undefined,
     } as any;
 
-    await sendOrderEmails(emailPayload);
+    try {
+      await sendOrderEmails(emailPayload);
+    } catch (emailError) {
+      console.error('Order email sending failed after successful order creation:', emailError);
+    }
 
     return NextResponse.json({ ok: true, order: createdOrder }, { status: 201 });
   } catch (error) {

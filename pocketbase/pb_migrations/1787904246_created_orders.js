@@ -161,7 +161,7 @@ migrate((app) => {
         "help": "",
         "hidden": false,
         "id": "number89422053",
-        "max": 0,
+        "max": 9999999999,
         "min": 0,
         "name": "total_price",
         "onlyInt": false,

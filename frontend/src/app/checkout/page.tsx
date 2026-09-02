@@ -383,12 +383,7 @@ export default function CheckoutPage() {
       console.error('Hiba a rendelés mentésekor:', submitError);
 
       const message = submitError instanceof Error ? submitError.message : 'A rendelés leadása közben hiba történt. Próbáld újra.';
-
-      if (message.includes('minimum 175 Ft')) {
-        setError(message);
-      } else {
-        setError('A rendelés leadása közben hiba történt. Próbáld újra.');
-      }
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

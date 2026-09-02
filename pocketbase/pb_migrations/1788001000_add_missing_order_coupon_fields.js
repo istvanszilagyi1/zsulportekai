@@ -42,7 +42,7 @@ migrate((app) => {
       hidden: false,
       presentable: false,
       min: 0,
-      max: 0,
+      max: 9999999999,
       onlyInt: false
     }));
 
@@ -122,7 +122,7 @@ migrate((app) => {
       hidden: false,
       presentable: false,
       min: 0,
-      max: 0,
+      max: 9999999999,
       onlyInt: false
     }));
 
@@ -170,7 +170,7 @@ migrate((app) => {
       hidden: false,
       presentable: false,
       min: 0,
-      max: 0,
+      max: 9999999999,
       onlyInt: false
     }));
 

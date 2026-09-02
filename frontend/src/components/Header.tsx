@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/pocketbase';
+import { getEffectiveProductPrice } from '@/types';
 
 const navigation = [
   { label: 'Portékáink', href: '#products', icon: Package },
@@ -235,7 +236,7 @@ export default function Header() {
                       <div>
                         <p className="text-sm font-semibold text-[#2d2922] line-clamp-1">{product.title}</p>
                         <p className="mt-0.5 text-xs font-medium text-[#a35e29]">
-                          {product.price.toLocaleString('hu-HU')} Ft
+                          {getEffectiveProductPrice(product).toLocaleString('hu-HU')} Ft
                         </p>
                       </div>
 
@@ -271,7 +272,7 @@ export default function Header() {
                       </div>
 
                       <p className="text-sm font-bold text-[#2d2922]">
-                        {(product.price * quantity).toLocaleString('hu-HU')} Ft
+                        {(getEffectiveProductPrice(product) * quantity).toLocaleString('hu-HU')} Ft
                       </p>
                     </div>
                   </div>

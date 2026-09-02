@@ -22,7 +22,7 @@ import Header from '@/components/Header';
 import FoxpostPicker, { type FoxpostSelection } from '@/components/FoxpostPicker';
 import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/pocketbase';
-import type { PaymentMethod } from '@/types';
+import { getEffectiveProductPrice, type PaymentMethod } from '@/types';
 
 const resolveProductImage = (product: { image?: string | null } | null, fallback = '/placeholder.png') => {
   if (!product?.image) return fallback;
@@ -165,7 +165,7 @@ export default function CheckoutPage() {
     if (appliedCoupon.product_id) {
       const matchingProductTotal = cart.reduce((sum, { product, quantity }) => {
         if (product.id === appliedCoupon.product_id) {
-          return sum + Number(product.price ?? 0) * quantity;
+          return sum + getEffectiveProductPrice(product) * quantity;
         }
         return sum;
       }, 0);
@@ -318,7 +318,7 @@ export default function CheckoutPage() {
         items: cart.map(({ product, quantity }) => ({
           id: product.id,
           title: product.title,
-          price: Number(product.price ?? 0),
+          price: getEffectiveProductPrice(product),
           quantity,
         })),
         total_price: orderTotal,
@@ -821,7 +821,7 @@ export default function CheckoutPage() {
                     </div>
 
                     <p className="shrink-0 text-sm font-semibold text-[#2d2922]">
-                      {(product.price * quantity).toLocaleString('hu-HU')} Ft
+                      {(getEffectiveProductPrice(product) * quantity).toLocaleString('hu-HU')} Ft
                     </p>
                   </div>
                 ))}
@@ -874,7 +874,7 @@ export default function CheckoutPage() {
                         setCouponError('');
                       }
                     }}
-                    placeholder="ZSUL10"
+                    placeholder="KÓD"
                     className="w-full rounded-2xl border border-[#dad0c3] bg-[#faf8f5] px-4 py-3 text-sm text-[#2c2924] outline-none transition placeholder:text-[#9a9288] focus:border-[#2d2922]"
                   />
                   <button

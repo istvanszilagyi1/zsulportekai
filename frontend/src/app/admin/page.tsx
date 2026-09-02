@@ -85,6 +85,17 @@ type CouponRecord = {
   created?: string;
 };
 
+type ProductAdminRecord = {
+  id: string;
+  title: string;
+  price: number;
+  sale_price?: number;
+  is_out_of_stock?: boolean;
+  stock?: number;
+  description?: string;
+  image?: string;
+};
+
 const ORDER_STATUS_OPTIONS: OrderStatus[] = [
   'pending',
   'paid',
@@ -258,6 +269,7 @@ export default function AdminPage() {
     }
   });
   const [coupons, setCoupons] = useState<CouponRecord[]>([]);
+  const [productsForAdmin, setProductsForAdmin] = useState<ProductAdminRecord[]>([]);
   const [couponForm, setCouponForm] = useState({
     id: '',
     code: '',
@@ -266,6 +278,13 @@ export default function AdminPage() {
     product_id: '',
     product_title: '',
     active: true,
+    description: '',
+  });
+  const [productForm, setProductForm] = useState({
+    product_id: '',
+    product_title: '',
+    sale_price: 0,
+    is_out_of_stock: false,
     description: '',
   });
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -313,6 +332,30 @@ export default function AdminPage() {
     }
   };
 
+  const fetchProductsForAdmin = async () => {
+    try {
+      const records = await pb.collection('products').getFullList({
+        sort: '-created',
+      });
+
+      const normalizedProducts = (((records as unknown) as Array<Partial<ProductAdminRecord> & Record<string, unknown>>) ?? []).map((product) => ({
+        id: String(product.id ?? ''),
+        title: String(product.title ?? 'Ismeretlen termék'),
+        price: Number(product.price ?? 0),
+        sale_price: Number(product.sale_price ?? 0),
+        is_out_of_stock: Boolean(product.is_out_of_stock),
+        stock: Number(product.stock ?? 0),
+        description: typeof product.description === 'string' ? product.description : '',
+        image: typeof product.image === 'string' ? product.image : '',
+      }));
+
+      setProductsForAdmin(normalizedProducts);
+    } catch (error) {
+      console.error('Termékek betöltése sikertelen:', error);
+      setProductsForAdmin([]);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       return;
@@ -323,6 +366,7 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
     fetchCoupons();
+    fetchProductsForAdmin();
   }, [isAuthenticated]);
 
   const generatedEmailLog = useMemo<EmailLogEntry[]>(() => {
@@ -570,6 +614,34 @@ export default function AdminPage() {
     }
   };
 
+  const handleSaveProduct = async () => {
+    const selectedProduct = productsForAdmin.find((product) => product.id === productForm.product_id);
+    if (!selectedProduct) {
+      window.alert('Előbb válassz ki egy terméket a lista közül.');
+      return;
+    }
+
+    const salePrice = Number(productForm.sale_price ?? 0);
+    if (salePrice > 0 && selectedProduct.price > 0 && salePrice >= selectedProduct.price) {
+      window.alert('Az akciós ár legyen kisebb a normál árnál.');
+      return;
+    }
+
+    try {
+      await pb.collection('products').update(selectedProduct.id, {
+        sale_price: salePrice,
+        is_out_of_stock: Boolean(productForm.is_out_of_stock),
+        description: productForm.description || selectedProduct.description || '',
+      });
+
+      setProductForm({ product_id: '', product_title: '', sale_price: 0, is_out_of_stock: false, description: '' });
+      await fetchProductsForAdmin();
+    } catch (error) {
+      console.error('Termék módosítása sikertelen:', error);
+      window.alert('A termék szerkesztése sikertelen volt.');
+    }
+  };
+
   const handleSaveEdit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingOrder) return;
@@ -602,6 +674,7 @@ export default function AdminPage() {
         invoice_email: editingOrder.invoice_email ?? '',
       };
 
+      const previousStatus = getOrderStatusValue(editingOrder);
       const updated = await pb.collection('orders').update(editingOrder.id, payload);
       const refreshed = await pb.collection('orders').getOne(editingOrder.id).catch(() => updated);
       const updatedOrder = refreshed as unknown as OrderRecord;
@@ -616,6 +689,18 @@ export default function AdminPage() {
         status: getOrderStatusValue(updatedOrder),
         payment_status: updatedOrder.payment_status ?? derivePaymentStatus(getOrderStatusValue(updatedOrder)),
       };
+
+      if (previousStatus !== normalized.status) {
+        const emailStatus = normalized.status === 'cancelled' || normalized.status === 'refunded' ? 'cancelled' : normalized.status;
+        await fetch('/api/orders/email-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: editingOrder.id,
+            status: emailStatus,
+          }),
+        }).catch(() => undefined);
+      }
 
       if (editingOrder.status !== normalized.status || editingOrder.payment_status !== normalized.payment_status) {
         setEditingOrder((current) => (current ? { ...current, status: normalized.status, payment_status: normalized.payment_status } : current));
@@ -1190,7 +1275,7 @@ export default function AdminPage() {
                 <input
                   value={couponForm.code}
                   onChange={(event) => setCouponForm((current) => ({ ...current, code: event.target.value.toUpperCase() }))}
-                  placeholder="ZSUL10"
+                  placeholder="KÓD"
                   className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
                 />
               </label>
@@ -1268,6 +1353,74 @@ export default function AdminPage() {
               </div>
             </form>
 
+            <div className="mb-8 grid gap-4 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5 md:grid-cols-2 xl:grid-cols-4">
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék</span>
+                <select
+                  value={productForm.product_id}
+                  onChange={(event) => {
+                    const selected = productsForAdmin.find((product) => product.id === event.target.value);
+                    setProductForm((current) => ({
+                      ...current,
+                      product_id: event.target.value,
+                      product_title: selected?.title ?? current.product_title,
+                      sale_price: selected ? Number(selected.sale_price ?? 0) : current.sale_price,
+                      is_out_of_stock: selected ? Boolean(selected.is_out_of_stock) : current.is_out_of_stock,
+                    }));
+                  }}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                >
+                  <option value="">Válassz terméket</option>
+                  {productsForAdmin.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Akciós ár (Ft)</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={productForm.sale_price}
+                  onChange={(event) => setProductForm((current) => ({ ...current, sale_price: Number(event.target.value) }))}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék név</span>
+                <input
+                  value={productForm.product_title}
+                  onChange={(event) => setProductForm((current) => ({ ...current, product_title: event.target.value }))}
+                  placeholder="Példa termék"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <div className="flex items-end justify-between gap-3 xl:col-span-1">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#4c453d]">
+                  <input
+                    type="checkbox"
+                    checked={productForm.is_out_of_stock}
+                    onChange={(event) => setProductForm((current) => ({ ...current, is_out_of_stock: event.target.checked }))}
+                    className="h-4 w-4 accent-[#2d2922]"
+                  />
+                  Elfogyott
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveProduct()}
+                  className="inline-flex items-center justify-center rounded-full bg-[#2d2922] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-[#1e1b18]"
+                >
+                  Mentés
+                </button>
+              </div>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {coupons.length === 0 ? (
                 <div className="rounded-[22px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-6 text-sm text-[#5d564f] md:col-span-2 xl:col-span-3">
@@ -1309,6 +1462,46 @@ export default function AdminPage() {
                   </div>
                 ))
               )}
+            </div>
+
+            <div className="mt-8 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="text-xl font-medium tracking-[-0.04em] text-[#2d2922]">Termékek leárazása és állapota</h3>
+                <div className="rounded-full bg-[#f2eadc] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6b5539]">
+                  {productsForAdmin.length} termék
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {productsForAdmin.map((product) => (
+                  <div key={product.id} className="rounded-[20px] border border-[#e3ded3] bg-white p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="text-sm font-semibold text-[#2d2922]">{product.title}</div>
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${product.is_out_of_stock ? 'bg-[#fbe9e7] text-[#9a3c2c]' : 'bg-[#eaf5eb] text-[#2a7b46]'}`}>
+                        {product.is_out_of_stock ? 'Elfogyott' : 'Raktáron'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-sm text-[#4c453d]">
+                      <div><span className="font-medium text-[#2d2922]">Normál ár:</span> {product.price.toLocaleString('hu-HU')} Ft</div>
+                      <div><span className="font-medium text-[#2d2922]">Akciós ár:</span> {product.sale_price && product.sale_price > 0 ? `${product.sale_price.toLocaleString('hu-HU')} Ft` : 'Nincs leárazás'}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({
+                        product_id: product.id,
+                        product_title: product.title,
+                        sale_price: Number(product.sale_price ?? 0),
+                        is_out_of_stock: Boolean(product.is_out_of_stock),
+                        description: product.description ?? '',
+                      })}
+                      className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#d9d0c2] bg-[#f8f3ec] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      Szerkesztés
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}

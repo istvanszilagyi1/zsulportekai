@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Product, CartItem } from '@/types';
+import { Product, CartItem, getEffectiveProductPrice } from '@/types';
 
 interface CartContextType {
   cart: CartItem[];
@@ -35,6 +35,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [cart]);
 
   const addToCart = (product: Product) => {
+    if (product.is_out_of_stock) {
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -69,7 +73,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = () => setCart([]);
 
   const totalPrice = Math.round(
-    cart.reduce((sum, item) => sum + Number(item.product.price ?? 0) * item.quantity, 0)
+    cart.reduce((sum, item) => sum + getEffectiveProductPrice(item.product) * item.quantity, 0)
   );
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);

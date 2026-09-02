@@ -16,7 +16,7 @@ import {
 import Header from '@/components/Header';
 import { useCart } from '@/context/CartContext';
 import { pb, getImageUrl } from '@/lib/pocketbase';
-import type { Product } from '@/types';
+import { getEffectiveProductPrice, type Product } from '@/types';
 
 type CategoryFilter = 'all' | 'olajok' | 'gyumolcslevek' | 'lisztek';
 
@@ -628,8 +628,13 @@ export default function HomePage() {
 
                         <div className="shrink-0 text-right">
                           <p className="text-sm font-semibold text-[#2c2923] sm:text-base">
-                            {product.price.toLocaleString('hu-HU')} Ft
+                            {getEffectiveProductPrice(product).toLocaleString('hu-HU')} Ft
                           </p>
+                          {typeof product.sale_price === 'number' && product.sale_price > 0 && product.sale_price < product.price ? (
+                            <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[#9d8670] line-through">
+                              {product.price.toLocaleString('hu-HU')} Ft
+                            </p>
+                          ) : null}
 
                           <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[#999286]">
                             {categoryName(category)}
@@ -693,8 +698,13 @@ export default function HomePage() {
                     </h3>
 
                     <p className="mt-4 text-xl font-semibold text-[#2d2923] sm:text-2xl">
-                      {selectedProduct.price.toLocaleString('hu-HU')} Ft
+                      {getEffectiveProductPrice(selectedProduct).toLocaleString('hu-HU')} Ft
                     </p>
+                    {typeof selectedProduct.sale_price === 'number' && selectedProduct.sale_price > 0 && selectedProduct.sale_price < selectedProduct.price ? (
+                      <p className="mt-1 text-sm text-[#8d7c69] line-through">
+                        {selectedProduct.price.toLocaleString('hu-HU')} Ft
+                      </p>
+                    ) : null}
 
                     <button
                       type="button"

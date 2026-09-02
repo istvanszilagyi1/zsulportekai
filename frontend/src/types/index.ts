@@ -5,7 +5,20 @@ export interface Product {
   description?: string;
   image: string;
   stock?: number;
+  sale_price?: number;
+  is_out_of_stock?: boolean;
 }
+
+export const getEffectiveProductPrice = (product: Pick<Product, 'price' | 'sale_price'>) => {
+  const basePrice = Number(product.price ?? 0);
+  const salePrice = Number(product.sale_price ?? 0);
+
+  if (salePrice > 0 && salePrice < basePrice) {
+    return salePrice;
+  }
+
+  return basePrice;
+};
 
 export interface CartItem {
   product: Product;

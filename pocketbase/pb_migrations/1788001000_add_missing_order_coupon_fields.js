@@ -3,274 +3,194 @@
 migrate((app) => {
   const ordersCollection = app.findCollectionByNameOrId('pbc_3527180448');
   if (ordersCollection) {
-    const ensureOrderField = (fieldConfig) => {
-      const exists = ordersCollection.fields.some((field) => field.name === fieldConfig.name);
-      if (!exists) {
-        ordersCollection.fields.push(fieldConfig);
+    const ensureOrderField = (field) => {
+      if (!ordersCollection.fields.getByName(field.name)) {
+        ordersCollection.fields.add(field);
       }
     };
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "select407885657",
-      "maxSelect": 0,
-      "name": "payment_method",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "select",
-      "values": ["bank_transfer", "stripe"]
-    });
+    ensureOrderField(new SelectField({
+      name: 'payment_method',
+      required: false,
+      hidden: false,
+      presentable: false,
+      maxSelect: 0,
+      values: ['bank_transfer', 'stripe']
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "select434408116",
-      "maxSelect": 0,
-      "name": "payment_status",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "select",
-      "values": ["pending", "paid", "refunded"]
-    });
+    ensureOrderField(new SelectField({
+      name: 'payment_status',
+      required: false,
+      hidden: false,
+      presentable: false,
+      maxSelect: 0,
+      values: ['pending', 'paid', 'refunded']
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "select337584382",
-      "maxSelect": 0,
-      "name": "status",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "select",
-      "values": ["pending", "paid", "processing", "completed", "cancelled", "refunded"]
-    });
+    ensureOrderField(new SelectField({
+      name: 'status',
+      required: false,
+      hidden: false,
+      presentable: false,
+      maxSelect: 0,
+      values: ['pending', 'paid', 'processing', 'completed', 'cancelled', 'refunded']
+    }));
 
-    ensureOrderField({
-      "hidden": false,
-      "id": "number89422053",
-      "max": 0,
-      "min": 0,
-      "name": "total_price",
-      "onlyInt": false,
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "number"
-    });
+    ensureOrderField(new NumberField({
+      name: 'total_price',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0,
+      onlyInt: false
+    }));
 
-    ensureOrderField({
-      "hidden": false,
-      "id": "json2062985226",
-      "name": "items",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "json"
-    });
+    ensureOrderField(new JsonField({
+      name: 'items',
+      required: false,
+      hidden: false,
+      presentable: false
+    }));
 
-    ensureOrderField({
-      "hidden": false,
-      "id": "bool742384372",
-      "name": "invoice_required",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "bool",
-      "default": false
-    });
+    ensureOrderField(new BoolField({
+      name: 'invoice_required',
+      required: false,
+      hidden: false,
+      presentable: false,
+      default: false
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text1946655255",
-      "max": 0,
-      "min": 0,
-      "name": "invoice_company_name",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'invoice_company_name',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text2719392025",
-      "max": 0,
-      "min": 0,
-      "name": "invoice_tax_number",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'invoice_tax_number',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text1033915616",
-      "max": 0,
-      "min": 0,
-      "name": "invoice_address",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'invoice_address',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureOrderField({
-      "exceptDomains": [],
-      "hidden": false,
-      "id": "email912307455",
-      "name": "invoice_email",
-      "onlyDomains": [],
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "email"
-    });
+    ensureOrderField(new EmailField({
+      name: 'invoice_email',
+      required: false,
+      hidden: false,
+      presentable: false,
+      onlyDomains: [],
+      exceptDomains: []
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text2739059261",
-      "max": 0,
-      "min": 0,
-      "name": "coupon_code",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'coupon_code',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureOrderField({
-      "hidden": false,
-      "id": "number2787160294",
-      "max": 100,
-      "min": 0,
-      "name": "coupon_discount_percent",
-      "onlyInt": false,
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "number"
-    });
+    ensureOrderField(new NumberField({
+      name: 'coupon_discount_percent',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 100,
+      onlyInt: false
+    }));
 
-    ensureOrderField({
-      "hidden": false,
-      "id": "number1222083329",
-      "max": 0,
-      "min": 0,
-      "name": "coupon_discount_amount",
-      "onlyInt": false,
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "number"
-    });
+    ensureOrderField(new NumberField({
+      name: 'coupon_discount_amount',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0,
+      onlyInt: false
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text1418745304",
-      "max": 0,
-      "min": 0,
-      "name": "coupon_product_id",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'coupon_product_id',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text1705568274",
-      "max": 0,
-      "min": 0,
-      "name": "coupon_product_title",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'coupon_product_title',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureOrderField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text1676863109",
-      "max": 0,
-      "min": 0,
-      "name": "stripe_session_id",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureOrderField(new TextField({
+      name: 'stripe_session_id',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
     app.save(ordersCollection);
   }
 
   const couponsCollection = app.findCollectionByNameOrId('pbc_coupons_01');
   if (couponsCollection) {
-    const ensureCouponField = (fieldConfig) => {
-      const exists = couponsCollection.fields.some((field) => field.name === fieldConfig.name);
-      if (!exists) {
-        couponsCollection.fields.push(fieldConfig);
+    const ensureCouponField = (field) => {
+      if (!couponsCollection.fields.getByName(field.name)) {
+        couponsCollection.fields.add(field);
       }
     };
 
-    ensureCouponField({
-      "hidden": false,
-      "id": "number842197335",
-      "max": 0,
-      "min": 0,
-      "name": "discount_amount",
-      "onlyInt": false,
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "number"
-    });
+    ensureCouponField(new NumberField({
+      name: 'discount_amount',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0,
+      onlyInt: false
+    }));
 
-    ensureCouponField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text437981319",
-      "max": 0,
-      "min": 0,
-      "name": "product_id",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureCouponField(new TextField({
+      name: 'product_id',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
-    ensureCouponField({
-      "autogeneratePattern": "",
-      "hidden": false,
-      "id": "text3122710902",
-      "max": 0,
-      "min": 0,
-      "name": "product_title",
-      "pattern": "",
-      "presentable": false,
-      "required": false,
-      "system": false,
-      "type": "text"
-    });
+    ensureCouponField(new TextField({
+      name: 'product_title',
+      required: false,
+      hidden: false,
+      presentable: false,
+      min: 0,
+      max: 0
+    }));
 
     app.save(couponsCollection);
   }

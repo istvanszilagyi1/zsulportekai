@@ -892,7 +892,7 @@ export default function CheckoutPage() {
                   <p className="mt-2 text-xs text-[#356b42]">Kupon aktiválva: {appliedCoupon.code} ({appliedCoupon.discount_percent}% kedvezmény)</p>
                 ) : (
                   <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[#7b756b]">
-                    Admin által szerkeszthető kuponkódok
+                    Add meg a kuponkódot a kedvezmény érvényesítéséhez.
                   </p>
                 )}
               </div>

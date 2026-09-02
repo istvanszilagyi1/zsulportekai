@@ -190,6 +190,39 @@ const getNextStatusForOrder = (order: OrderRecord): OrderStatus => {
   return 'completed';
 };
 
+const normalizeFetchedOrder = (rawOrder: Partial<OrderRecord> & Record<string, unknown>): OrderRecord => {
+  const derivedNames = splitCustomerName(String(rawOrder.customer_name ?? ''));
+  const firstName = String(rawOrder.customer_first_name ?? derivedNames.firstName ?? '').trim();
+  const lastName = String(rawOrder.customer_last_name ?? derivedNames.lastName ?? '').trim();
+  const customerName = buildFullName(firstName, lastName) || String(rawOrder.customer_name ?? '').trim() || 'Névtelen vásárló';
+  const status = getOrderStatusValue({
+    ...(rawOrder as OrderRecord),
+    customer_name: customerName,
+    customer_first_name: firstName,
+    customer_last_name: lastName,
+  });
+
+  return {
+    ...(rawOrder as OrderRecord),
+    customer_first_name: firstName || undefined,
+    customer_last_name: lastName || undefined,
+    customer_name: customerName,
+    customer_email: String(rawOrder.customer_email ?? '').trim() || 'unknown@example.invalid',
+    customer_phone: String(rawOrder.customer_phone ?? '').trim(),
+    delivery_method: rawOrder.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
+    payment_method: rawOrder.payment_method === 'stripe' ? 'stripe' : 'bank_transfer',
+    payment_status: rawOrder.payment_status === 'refunded'
+      ? 'refunded'
+      : rawOrder.payment_status === 'paid' || status === 'paid' || status === 'processing' || status === 'completed'
+        ? 'paid'
+        : 'pending',
+    status,
+    total_price: Number(rawOrder.total_price ?? 0),
+    items: Array.isArray(rawOrder.items) ? rawOrder.items : [],
+    created: rawOrder.created ?? new Date().toISOString(),
+  };
+};
+
 const getAutoAdvanceLabel = (order: OrderRecord) => {
   const current = getOrderStatusValue(order);
 
@@ -249,24 +282,7 @@ export default function AdminPage() {
         sort: '-created',
       });
 
-      const normalized: OrderRecord[] = (records as unknown as OrderRecord[]).map((order) => {
-        const status = getOrderStatusValue(order);
-        const derivedNames = splitCustomerName(order.customer_name);
-        const nextPaymentStatus: PaymentStatus = order.payment_status === 'refunded'
-          ? 'refunded'
-          : order.payment_status === 'paid' || status === 'paid' || status === 'processing' || status === 'completed'
-            ? 'paid'
-            : 'pending';
-
-        return {
-          ...order,
-          customer_first_name: order.customer_first_name ?? derivedNames.firstName,
-          customer_last_name: order.customer_last_name ?? derivedNames.lastName,
-          customer_name: buildFullName(order.customer_first_name ?? derivedNames.firstName, order.customer_last_name ?? derivedNames.lastName) || order.customer_name,
-          status,
-          payment_status: nextPaymentStatus,
-        };
-      });
+      const normalized: OrderRecord[] = (records as Array<Partial<OrderRecord> & Record<string, unknown>>).map((order) => normalizeFetchedOrder(order));
 
       setOrders(normalized);
     } catch (error) {
@@ -414,6 +430,7 @@ export default function AdminPage() {
         payment_status: nextPaymentStatus,
       });
 
+      const refreshedOrder = await pb.collection('orders').getOne(orderId).catch(() => null);
       const emailStatus = nextStatus === 'cancelled' || nextStatus === 'refunded' ? 'cancelled' : nextStatus;
       await fetch('/api/orders/email-status', {
         method: 'POST',
@@ -423,6 +440,17 @@ export default function AdminPage() {
           status: emailStatus,
         }),
       }).catch(() => undefined);
+
+      if (refreshedOrder) {
+        const normalized = normalizeFetchedOrder(refreshedOrder as Partial<OrderRecord> & Record<string, unknown>);
+
+        setOrders((current) => current.map((order) => (order.id === orderId ? normalized : order)));
+
+        if (editingOrder?.id === orderId) {
+          setEditingOrder((current) => (current ? normalized : current));
+        }
+        return;
+      }
 
       setOrders((current) =>
         current.map((order) => (order.id === orderId ? { ...order, ...updatedOrder, status: nextStatus, payment_status: nextPaymentStatus } : order)),
@@ -575,7 +603,8 @@ export default function AdminPage() {
       };
 
       const updated = await pb.collection('orders').update(editingOrder.id, payload);
-      const updatedOrder = updated as unknown as OrderRecord;
+      const refreshed = await pb.collection('orders').getOne(editingOrder.id).catch(() => updated);
+      const updatedOrder = refreshed as unknown as OrderRecord;
       const normalized = {
         ...updatedOrder,
         customer_first_name: splitCustomerName(updatedOrder.customer_name).firstName,

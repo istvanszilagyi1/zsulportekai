@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import PocketBase from 'pocketbase';
 import { sendOrderStatusEmail } from '@/lib/email';
-
-const pb = new PocketBase(process.env.POCKETBASE_URL || process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090');
+import { getAdminPocketBaseClient } from '@/lib/pocketbase';
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +12,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Hiányzó rendelés azonosító.' }, { status: 400 });
     }
 
-    const order = await pb.collection('orders').getOne(orderId).catch(() => null);
+    const adminPb = await getAdminPocketBaseClient();
+    const order = adminPb ? await adminPb.collection('orders').getOne(orderId).catch(() => null) : null;
     if (!order) {
       return NextResponse.json({ ok: true, skipped: true }, { status: 200 });
     }

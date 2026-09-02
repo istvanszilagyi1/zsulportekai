@@ -46,7 +46,7 @@ migrate((app) => {
       onlyInt: false
     }));
 
-    ensureOrderField(new JsonField({
+    ensureOrderField(new JSONField({
       name: 'items',
       required: false,
       hidden: false,

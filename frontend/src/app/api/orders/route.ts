@@ -16,6 +16,11 @@ const toOptionalNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const sanitizePocketBasePayload = (payload: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined && value !== null)
+  );
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -28,7 +33,7 @@ export async function POST(request: Request) {
     const customerLastName = toOptionalText(body.customer_last_name) ?? '';
     const customerName = toOptionalText(body.customer_name) ?? [customerFirstName, customerLastName].filter(Boolean).join(' ');
 
-    const orderPayload = {
+    const orderPayload = sanitizePocketBasePayload({
       customer_name: customerName,
       customer_first_name: customerFirstName || undefined,
       customer_last_name: customerLastName || undefined,
@@ -54,24 +59,24 @@ export async function POST(request: Request) {
       total_price: Number.isFinite(Number(body.total_price)) ? Number(body.total_price) : 0,
       status: 'pending',
       items: Array.isArray(body.items) ? body.items : [],
-    };
+    });
 
     const createdOrder = await pb.collection('orders').create(orderPayload as Record<string, unknown>);
 
     const emailPayload = {
       id: String(createdOrder.id),
-      customer_name: orderPayload.customer_name,
-      customer_first_name: orderPayload.customer_first_name,
-      customer_last_name: orderPayload.customer_last_name,
-      customer_email: orderPayload.customer_email,
-      delivery_method: orderPayload.delivery_method as 'foxpost' | 'home_delivery',
-      payment_method: orderPayload.payment_method as 'bank_transfer' | 'stripe',
-      total_price: orderPayload.total_price,
-      items: orderPayload.items,
-      foxpost_place_name: orderPayload.foxpost_place_name,
-      foxpost_place_address: orderPayload.foxpost_place_address,
-      shipping_address: orderPayload.shipping_address,
-    };
+      customer_name: typeof orderPayload.customer_name === 'string' ? orderPayload.customer_name : String(orderPayload.customer_name ?? ''),
+      customer_first_name: typeof orderPayload.customer_first_name === 'string' ? orderPayload.customer_first_name : undefined,
+      customer_last_name: typeof orderPayload.customer_last_name === 'string' ? orderPayload.customer_last_name : undefined,
+      customer_email: typeof orderPayload.customer_email === 'string' ? orderPayload.customer_email : undefined,
+      delivery_method: orderPayload.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
+      payment_method: orderPayload.payment_method === 'stripe' ? 'stripe' : 'bank_transfer',
+      total_price: typeof orderPayload.total_price === 'number' ? orderPayload.total_price : Number(orderPayload.total_price ?? 0),
+      items: Array.isArray(orderPayload.items) ? orderPayload.items : [],
+      foxpost_place_name: typeof orderPayload.foxpost_place_name === 'string' ? orderPayload.foxpost_place_name : undefined,
+      foxpost_place_address: typeof orderPayload.foxpost_place_address === 'string' ? orderPayload.foxpost_place_address : undefined,
+      shipping_address: typeof orderPayload.shipping_address === 'string' ? orderPayload.shipping_address : undefined,
+    } as any;
 
     await sendOrderEmails(emailPayload);
 

@@ -1,11 +1,31 @@
 import PocketBase from 'pocketbase';
 
+const isLocalPocketBaseHost = (value: string | undefined) => {
+  if (!value) return false;
+
+  try {
+    const { hostname } = new URL(value);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.endsWith('.localhost');
+  } catch {
+    return false;
+  }
+};
+
 export function getPocketBaseBaseUrl(): string {
   const configuredUrl =
     process.env.POCKETBASE_URL ||
     process.env.NEXT_PUBLIC_POCKETBASE_URL ||
     process.env.NEXT_PUBLIC_POCKETBASE_PUBLIC_URL ||
     'http://127.0.0.1:8090';
+
+  const publicUrl =
+    process.env.NEXT_PUBLIC_POCKETBASE_URL ||
+    process.env.NEXT_PUBLIC_POCKETBASE_PUBLIC_URL ||
+    '';
+
+  if (isLocalPocketBaseHost(configuredUrl) && publicUrl && !isLocalPocketBaseHost(publicUrl)) {
+    return publicUrl.trim().replace(/\/+$/, '');
+  }
 
   return configuredUrl.trim().replace(/\/+$/, '');
 }

@@ -4,6 +4,18 @@ import { sendOrderEmails } from '@/lib/email';
 
 const pb = new PocketBase(process.env.POCKETBASE_URL || process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090');
 
+const toOptionalText = (value: unknown) => {
+  if (value === null || value === undefined) return undefined;
+  const text = String(value).trim();
+  return text.length > 0 ? text : undefined;
+};
+
+const toOptionalNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -12,34 +24,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Hiányzó adatok a rendeléshez.' }, { status: 400 });
     }
 
-    const customerFirstName = body.customer_first_name ? String(body.customer_first_name).trim() : '';
-    const customerLastName = body.customer_last_name ? String(body.customer_last_name).trim() : '';
-    const customerName = String(body.customer_name ?? [customerFirstName, customerLastName].filter(Boolean).join(' ')).trim();
+    const customerFirstName = toOptionalText(body.customer_first_name) ?? '';
+    const customerLastName = toOptionalText(body.customer_last_name) ?? '';
+    const customerName = toOptionalText(body.customer_name) ?? [customerFirstName, customerLastName].filter(Boolean).join(' ');
 
     const orderPayload = {
       customer_name: customerName,
-      customer_first_name: customerFirstName,
-      customer_last_name: customerLastName,
-      customer_email: String(body.customer_email).trim(),
-      customer_phone: String(body.customer_phone).trim(),
+      customer_first_name: customerFirstName || undefined,
+      customer_last_name: customerLastName || undefined,
+      customer_email: toOptionalText(body.customer_email),
+      customer_phone: toOptionalText(body.customer_phone),
       delivery_method: body.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
       payment_method: body.payment_method === 'stripe' ? 'stripe' : 'bank_transfer',
       payment_status: 'pending',
       invoice_required: Boolean(body.invoice_required),
-      invoice_company_name: body.invoice_company_name ? String(body.invoice_company_name).trim() : undefined,
-      invoice_tax_number: body.invoice_tax_number ? String(body.invoice_tax_number).trim() : undefined,
-      invoice_address: body.invoice_address ? String(body.invoice_address).trim() : undefined,
-      invoice_email: body.invoice_email ? String(body.invoice_email).trim() : undefined,
-      foxpost_place_id: body.foxpost_place_id ? String(body.foxpost_place_id).trim() : undefined,
-      foxpost_place_name: body.foxpost_place_name ? String(body.foxpost_place_name).trim() : undefined,
-      foxpost_place_address: body.foxpost_place_address ? String(body.foxpost_place_address).trim() : undefined,
-      shipping_address: body.shipping_address ? String(body.shipping_address).trim() : undefined,
-      coupon_code: body.coupon_code ? String(body.coupon_code).trim().toUpperCase() : undefined,
-      coupon_discount_percent: Number(body.coupon_discount_percent ?? 0) || undefined,
-      coupon_discount_amount: Number(body.coupon_discount_amount ?? 0) || undefined,
-      coupon_product_id: body.coupon_product_id ? String(body.coupon_product_id).trim() : undefined,
-      coupon_product_title: body.coupon_product_title ? String(body.coupon_product_title).trim() : undefined,
-      total_price: Number(body.total_price ?? 0),
+      invoice_company_name: toOptionalText(body.invoice_company_name),
+      invoice_tax_number: toOptionalText(body.invoice_tax_number),
+      invoice_address: toOptionalText(body.invoice_address),
+      invoice_email: toOptionalText(body.invoice_email),
+      foxpost_place_id: toOptionalText(body.foxpost_place_id),
+      foxpost_place_name: toOptionalText(body.foxpost_place_name),
+      foxpost_place_address: toOptionalText(body.foxpost_place_address),
+      shipping_address: toOptionalText(body.shipping_address),
+      coupon_code: toOptionalText(body.coupon_code)?.toUpperCase(),
+      coupon_discount_percent: toOptionalNumber(body.coupon_discount_percent),
+      coupon_discount_amount: toOptionalNumber(body.coupon_discount_amount),
+      coupon_product_id: toOptionalText(body.coupon_product_id),
+      coupon_product_title: toOptionalText(body.coupon_product_title),
+      total_price: Number.isFinite(Number(body.total_price)) ? Number(body.total_price) : 0,
       status: 'pending',
       items: Array.isArray(body.items) ? body.items : [],
     };

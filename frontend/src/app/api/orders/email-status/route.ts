@@ -19,9 +19,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, skipped: true }, { status: 200 });
     }
 
-    const normalizedStatus = status === 'pending' || status === 'paid' || status === 'shipped' || status === 'completed' || status === 'cancelled'
-      ? status
-      : 'pending';
+    const allowedStatuses = ['pending', 'paid', 'processing', 'shipped', 'completed', 'cancelled', 'refunded'];
+    const normalizedStatus = allowedStatuses.includes(status) ? status : 'pending';
 
     const emailResult = await sendOrderStatusEmail(
       {
@@ -38,10 +37,10 @@ export async function POST(request: Request) {
         foxpost_place_address: order.foxpost_place_address ? String(order.foxpost_place_address) : undefined,
         shipping_address: order.shipping_address ? String(order.shipping_address) : undefined,
       },
-      normalizedStatus,
+      normalizedStatus as 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled' | 'refunded',
     );
 
-    return NextResponse.json({ ok: true, email: emailResult }, { status: 200 });
+    return NextResponse.json({ ok: true, email: emailResult, status: normalizedStatus }, { status: 200 });
   } catch (error) {
     console.error('Status email send failed:', error);
     return NextResponse.json({ error: 'A státusz e-mail küldése sikertelen volt.' }, { status: 500 });

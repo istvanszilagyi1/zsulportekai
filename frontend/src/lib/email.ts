@@ -27,6 +27,7 @@ export type SendTransactionalEmailOptions = {
   text: string;
   html?: string;
   replyTo?: string;
+  from?: string;
 };
 
 export const BRAND_NAME = 'Zsül Portékái';
@@ -144,7 +145,7 @@ const getEmailTransport = () => {
   });
 };
 
-async function sendViaResend({ to, subject, text, html }: SendTransactionalEmailOptions) {
+async function sendViaResend({ to, subject, text, html, replyTo, from }: SendTransactionalEmailOptions) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
     return null;
@@ -157,9 +158,9 @@ async function sendViaResend({ to, subject, text, html }: SendTransactionalEmail
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM || `${BRAND_NAME} <noreply@zsulportekai.hu>`,
+      from: from || process.env.EMAIL_FROM || `${BRAND_NAME} <noreply@zsulportekai.hu>`,
       to: [to],
-      reply_to: process.env.EMAIL_REPLY_TO || BRAND_SUPPORT_EMAIL,
+      reply_to: replyTo || process.env.EMAIL_REPLY_TO || BRAND_SUPPORT_EMAIL,
       subject,
       text,
       html,
@@ -174,13 +175,13 @@ async function sendViaResend({ to, subject, text, html }: SendTransactionalEmail
   return response.json();
 }
 
-async function sendViaSmtp({ to, subject, text, html, replyTo }: SendTransactionalEmailOptions) {
+async function sendViaSmtp({ to, subject, text, html, replyTo, from }: SendTransactionalEmailOptions) {
   const transporter = getEmailTransport();
   if (!transporter) {
     return null;
   }
 
-  const fromAddress = process.env.EMAIL_FROM || process.env.MAILER_FROM || `${BRAND_NAME} <${process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER || BRAND_SUPPORT_EMAIL}>`;
+  const fromAddress = from || process.env.EMAIL_FROM || process.env.MAILER_FROM || `${BRAND_NAME} <${process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER || BRAND_SUPPORT_EMAIL}>`;
 
   await transporter.sendMail({
     from: fromAddress,
@@ -350,7 +351,7 @@ export async function sendOrderEmails(order: OrderEmailInput) {
   };
 }
 
-export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled') {
+export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled' | 'refunded') {
   const customerEmail = order.customer_email;
   if (!customerEmail) {
     return { sent: false, reason: 'missing_customer_email' };
@@ -384,8 +385,13 @@ export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pend
     },
     cancelled: {
       label: 'A rendelés törölve',
-      intro: 'A rendelésed törlésre került, vagy a fizetési folyamat megszakadt. Ha kérdésed van, írj nekünk a ${BRAND_SUPPORT_EMAIL} címre.',
+      intro: `A rendelésed törlésre került, vagy a fizetési folyamat megszakadt. Ha kérdésed van, írj nekünk a ${BRAND_SUPPORT_EMAIL} címre.`,
       subject: `Rendelés törölve – ${BRAND_NAME}`,
+    },
+    refunded: {
+      label: 'A rendelés visszatérítve',
+      intro: `A rendelésedhez tartozó összeget visszatérítettük. Ha kérdésed van, írj nekünk a ${BRAND_SUPPORT_EMAIL} címre.`,
+      subject: `Rendelés visszatérítve – ${BRAND_NAME}`,
     },
   };
 

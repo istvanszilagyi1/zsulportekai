@@ -480,6 +480,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (couponForm.product_id && !couponForm.product_title.trim()) {
+      window.alert('Termékspecifikus kuponhoz a termék nevének megadása is kötelező.');
+      return;
+    }
+
     try {
       const payload = {
         code: normalizedCode,
@@ -1150,7 +1155,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <form onSubmit={handleSaveCoupon} className="mb-8 grid gap-4 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5 md:grid-cols-2 xl:grid-cols-5">
+            <form onSubmit={handleSaveCoupon} className="mb-8 grid gap-4 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5 md:grid-cols-2 xl:grid-cols-6">
               <label className="block xl:col-span-1">
                 <span className="mb-2 block text-sm font-medium text-[#4c453d]">Kupon kód</span>
                 <input
@@ -1165,7 +1170,7 @@ export default function AdminPage() {
                 <span className="mb-2 block text-sm font-medium text-[#4c453d]">Kedvezmény %</span>
                 <input
                   type="number"
-                  min={1}
+                  min={0}
                   max={100}
                   value={couponForm.discount_percent}
                   onChange={(event) => setCouponForm((current) => ({ ...current, discount_percent: Number(event.target.value) }))}
@@ -1173,7 +1178,38 @@ export default function AdminPage() {
                 />
               </label>
 
-              <label className="block xl:col-span-2">
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Fix leárazás (Ft)</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={couponForm.discount_amount}
+                  onChange={(event) => setCouponForm((current) => ({ ...current, discount_amount: Number(event.target.value) }))}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék ID</span>
+                <input
+                  value={couponForm.product_id}
+                  onChange={(event) => setCouponForm((current) => ({ ...current, product_id: event.target.value }))}
+                  placeholder="termek-id"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék név</span>
+                <input
+                  value={couponForm.product_title}
+                  onChange={(event) => setCouponForm((current) => ({ ...current, product_title: event.target.value }))}
+                  placeholder="Paleolit kenyér"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
                 <span className="mb-2 block text-sm font-medium text-[#4c453d]">Leírás</span>
                 <input
                   value={couponForm.description}
@@ -1183,7 +1219,7 @@ export default function AdminPage() {
                 />
               </label>
 
-              <div className="flex items-end gap-3 xl:col-span-1">
+              <div className="flex items-end gap-3 xl:col-span-6">
                 <label className="flex items-center gap-2 text-sm font-medium text-[#4c453d]">
                   <input
                     type="checkbox"
@@ -1218,7 +1254,9 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <div className="space-y-2 text-sm text-[#4c453d]">
-                      <div><span className="font-medium text-[#2d2922]">Kedvezmény:</span> {coupon.discount_percent}%</div>
+                      <div><span className="font-medium text-[#2d2922]">Kedvezmény:</span> {coupon.discount_percent ? `${coupon.discount_percent}%` : `${coupon.discount_amount ?? 0} Ft`}</div>
+                      {coupon.discount_amount ? <div><span className="font-medium text-[#2d2922]">Fix összeg:</span> {coupon.discount_amount} Ft</div> : null}
+                      {coupon.product_id ? <div><span className="font-medium text-[#2d2922]">Termék:</span> {coupon.product_title || coupon.product_id}</div> : null}
                       <div><span className="font-medium text-[#2d2922]">Leírás:</span> {coupon.description || 'Nincs megadva'}</div>
                     </div>
                     <div className="mt-4 flex gap-2">

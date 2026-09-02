@@ -159,6 +159,9 @@ export default function CheckoutPage() {
       return 0;
     }
 
+    const percentAmount = Number(appliedCoupon.discount_percent || 0);
+    const fixedAmount = Number(appliedCoupon.discount_amount || 0);
+
     if (appliedCoupon.product_id) {
       const matchingProductTotal = cart.reduce((sum, { product, quantity }) => {
         if (product.id === appliedCoupon.product_id) {
@@ -171,17 +174,18 @@ export default function CheckoutPage() {
         return 0;
       }
 
-      const percentDiscount = appliedCoupon.discount_percent
-        ? Math.round(matchingProductTotal * (Number(appliedCoupon.discount_percent || 0) / 100))
+      const percentDiscount = percentAmount
+        ? Math.round(matchingProductTotal * (percentAmount / 100))
         : 0;
-      const fixedDiscount = appliedCoupon.discount_amount
-        ? Math.round(Number(appliedCoupon.discount_amount || 0))
-        : 0;
+      const fixedDiscount = fixedAmount ? Math.round(fixedAmount) : 0;
 
       return Math.min(matchingProductTotal, percentDiscount + fixedDiscount);
     }
 
-    return Math.round(totalPrice * (Number(appliedCoupon.discount_percent || 0) / 100));
+    const cartPercentDiscount = percentAmount ? Math.round(totalPrice * (percentAmount / 100)) : 0;
+    const cartFixedDiscount = fixedAmount ? Math.round(fixedAmount) : 0;
+
+    return Math.min(totalPrice, cartPercentDiscount + cartFixedDiscount);
   }, [appliedCoupon, cart, totalPrice]);
   const subtotalAfterDiscount = Math.max(0, totalPrice - couponDiscount);
   const orderTotal = useMemo(() => Math.round(subtotalAfterDiscount + shippingCost), [subtotalAfterDiscount, shippingCost]);
@@ -300,7 +304,7 @@ export default function CheckoutPage() {
         customer_phone: formData.phone.trim(),
         delivery_method: deliveryMethod,
         payment_method: paymentMethod,
-        payment_status: isPaid ? 'paid' : 'pending',
+        payment_status: 'pending',
         invoice_required: formData.wantsInvoice,
         invoice_company_name: formData.wantsInvoice ? formData.companyName.trim() : undefined,
         invoice_tax_number: formData.wantsInvoice ? formData.taxNumber.trim() : undefined,
@@ -318,7 +322,7 @@ export default function CheckoutPage() {
           quantity,
         })),
         total_price: orderTotal,
-        status: isPaid ? 'paid' : 'pending',
+        status: 'pending',
         ...(deliveryMethod === 'foxpost'
           ? {
               foxpost_place_id: foxpostSelection?.id,

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       customer_phone: String(body.customer_phone).trim(),
       delivery_method: body.delivery_method === 'home_delivery' ? 'home_delivery' : 'foxpost',
       payment_method: body.payment_method === 'stripe' ? 'stripe' : 'bank_transfer',
-      payment_status: body.payment_status === 'paid' ? 'paid' : 'pending',
+      payment_status: 'pending',
       invoice_required: Boolean(body.invoice_required),
       invoice_company_name: body.invoice_company_name ? String(body.invoice_company_name).trim() : undefined,
       invoice_tax_number: body.invoice_tax_number ? String(body.invoice_tax_number).trim() : undefined,
@@ -34,8 +34,13 @@ export async function POST(request: Request) {
       foxpost_place_name: body.foxpost_place_name ? String(body.foxpost_place_name).trim() : undefined,
       foxpost_place_address: body.foxpost_place_address ? String(body.foxpost_place_address).trim() : undefined,
       shipping_address: body.shipping_address ? String(body.shipping_address).trim() : undefined,
+      coupon_code: body.coupon_code ? String(body.coupon_code).trim().toUpperCase() : undefined,
+      coupon_discount_percent: Number(body.coupon_discount_percent ?? 0) || undefined,
+      coupon_discount_amount: Number(body.coupon_discount_amount ?? 0) || undefined,
+      coupon_product_id: body.coupon_product_id ? String(body.coupon_product_id).trim() : undefined,
+      coupon_product_title: body.coupon_product_title ? String(body.coupon_product_title).trim() : undefined,
       total_price: Number(body.total_price ?? 0),
-      status: body.status === 'paid' || body.status === 'processing' || body.status === 'completed' ? body.status : 'pending',
+      status: 'pending',
       items: Array.isArray(body.items) ? body.items : [],
     };
 

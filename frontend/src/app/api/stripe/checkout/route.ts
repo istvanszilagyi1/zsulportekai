@@ -34,13 +34,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Érvénytelen rendelés vagy összeg a Stripe fizetéshez.' }, { status: 400 });
     }
 
-    if (amount < 175) {
-      return NextResponse.json(
-        { error: `A Stripe fizetéshez minimum 175 Ft szükséges. A jelenlegi összeg: ${amount} Ft.` },
-        { status: 400 },
-      );
-    }
-
     const allowedOrigin = getStripeCheckoutUrl();
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',

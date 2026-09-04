@@ -71,6 +71,7 @@ type EmailLogEntry = {
   subject: string;
   body: string;
   from?: string;
+  provider?: string;
 };
 
 type CouponRecord = {
@@ -268,6 +269,7 @@ export default function AdminPage() {
       return [];
     }
   });
+  const [persistedEmailLog, setPersistedEmailLog] = useState<EmailLogEntry[]>([]);
   const [coupons, setCoupons] = useState<CouponRecord[]>([]);
   const [productsForAdmin, setProductsForAdmin] = useState<ProductAdminRecord[]>([]);
   const [couponForm, setCouponForm] = useState({
@@ -283,7 +285,9 @@ export default function AdminPage() {
   const [productForm, setProductForm] = useState({
     product_id: '',
     product_title: '',
+    price: 0,
     sale_price: 0,
+    stock: 0,
     is_out_of_stock: false,
     description: '',
   });
@@ -356,6 +360,27 @@ export default function AdminPage() {
     }
   };
 
+  const fetchEmailLogs = async () => {
+    try {
+      const records = await pb.collection('email_logs').getFullList({ sort: '-sent_at', perPage: 60 });
+      setPersistedEmailLog((records as Array<Record<string, unknown>>).map((record) => ({
+        id: String(record.id ?? ''),
+        orderId: String(record.order_id ?? ''),
+        customerName: String(record.customer_name ?? ''),
+        recipient: String(record.recipient ?? ''),
+        type: record.type === 'admin' || record.type === 'invoice' ? record.type : 'customer',
+        sentAt: String(record.sent_at ?? record.created ?? new Date().toISOString()),
+        subject: String(record.subject ?? ''),
+        body: String(record.body ?? ''),
+        from: record.from_address ? String(record.from_address) : undefined,
+        provider: record.provider ? String(record.provider) : undefined,
+      })));
+    } catch (error) {
+      console.error('E-mail napló betöltése sikertelen:', error);
+      setPersistedEmailLog([]);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       return;
@@ -367,60 +392,15 @@ export default function AdminPage() {
     fetchOrders();
     fetchCoupons();
     fetchProductsForAdmin();
+    fetchEmailLogs();
   }, [isAuthenticated]);
 
-  const generatedEmailLog = useMemo<EmailLogEntry[]>(() => {
-    return orders.flatMap((order) => {
-      const customerName = buildFullName(order.customer_first_name, order.customer_last_name) || order.customer_name;
-      const base: EmailLogEntry[] = [
-        {
-          id: `${order.id}-customer`,
-          orderId: order.id,
-          customerName,
-          recipient: order.customer_email,
-          type: 'customer',
-          sentAt: order.created ?? new Date().toISOString(),
-          subject: 'Rendelés visszaigazolás',
-          body: `Kedves ${customerName}!\n\nA rendelésedet rögzítettük a Zsül Portékái webshopban.\n\nMegrendelés azonosító: #${order.id}\nÖsszeg: ${fmtMoney(order.total_price)}\n\nÜdvözlettel:\nZsül Portékái`,
-          from: 'Zsül Portékái',
-        },
-        {
-          id: `${order.id}-admin`,
-          orderId: order.id,
-          customerName,
-          recipient: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@zsulportekai.hu',
-          type: 'admin',
-          sentAt: order.created ?? new Date().toISOString(),
-          subject: 'Új rendelés érkezett',
-          body: `Új rendelés érkezett az alábbi adatokkal:\n\nNév: ${customerName}\nE-mail: ${order.customer_email}\nTelefon: ${order.customer_phone}\nÖsszeg: ${fmtMoney(order.total_price)}\nSzállítás: ${order.delivery_method === 'foxpost' ? order.foxpost_place_name ?? 'Foxpost automata' : order.shipping_address ?? 'Házhozszállítás'}`,
-          from: 'Zsül Portékái admin',
-        },
-      ];
-
-      if (order.invoice_required) {
-        base.push({
-          id: `${order.id}-invoice`,
-          orderId: order.id,
-          customerName,
-          recipient: order.invoice_email || order.customer_email,
-          type: 'invoice',
-          sentAt: order.created ?? new Date().toISOString(),
-          subject: 'Számla elküldése',
-          body: `Kedves ${customerName}!\n\nA számlához tartozó adatok elküldésre kerültek.\nCégnév: ${order.invoice_company_name ?? 'Nincs megadva'}\nAdószám: ${order.invoice_tax_number ?? 'Nincs megadva'}\nSzámlázási cím: ${order.invoice_address ?? 'Nincs megadva'}\nÖsszeg: ${fmtMoney(order.total_price)}`,
-          from: 'Zsül Portékái számlázás',
-        });
-      }
-
-      return base;
-    });
-  }, [orders]);
-
   const emailLog = useMemo<EmailLogEntry[]>(() => {
-    const merged = [...generatedEmailLog, ...savedEmailLog];
+    const merged = [...persistedEmailLog, ...savedEmailLog];
     const unique = new Map<string, EmailLogEntry>();
     merged.forEach((entry) => unique.set(entry.id, entry));
     return Array.from(unique.values()).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()).slice(0, 60);
-  }, [generatedEmailLog, savedEmailLog]);
+  }, [persistedEmailLog, savedEmailLog]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -645,20 +625,28 @@ export default function AdminPage() {
       return;
     }
 
+    const price = Number(productForm.price ?? 0);
     const salePrice = Number(productForm.sale_price ?? 0);
-    if (salePrice > 0 && selectedProduct.price > 0 && salePrice >= selectedProduct.price) {
+    if (price <= 0) {
+      window.alert('A normál ár legyen nullánál nagyobb.');
+      return;
+    }
+    if (salePrice > 0 && salePrice >= price) {
       window.alert('Az akciós ár legyen kisebb a normál árnál.');
       return;
     }
 
     try {
       await pb.collection('products').update(selectedProduct.id, {
+        title: productForm.product_title.trim() || selectedProduct.title,
+        price,
         sale_price: salePrice,
+        stock: Math.max(0, Number(productForm.stock ?? 0)),
         is_out_of_stock: Boolean(productForm.is_out_of_stock),
-        description: productForm.description || selectedProduct.description || '',
+        description: productForm.description,
       });
 
-      setProductForm({ product_id: '', product_title: '', sale_price: 0, is_out_of_stock: false, description: '' });
+      setProductForm({ product_id: '', product_title: '', price: 0, sale_price: 0, stock: 0, is_out_of_stock: false, description: '' });
       await fetchProductsForAdmin();
     } catch (error) {
       console.error('Termék módosítása sikertelen:', error);
@@ -1405,8 +1393,11 @@ export default function AdminPage() {
                       ...current,
                       product_id: productId,
                       product_title: selected?.title ?? current.product_title,
+                      price: selected ? Number(selected.price ?? 0) : current.price,
                       sale_price: selected ? Number(selected.sale_price ?? 0) : current.sale_price,
+                      stock: selected ? Number(selected.stock ?? 0) : current.stock,
                       is_out_of_stock: selected ? Boolean(selected.is_out_of_stock) : current.is_out_of_stock,
+                      description: selected?.description ?? current.description,
                     }));
                   }}
                   className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
@@ -1421,6 +1412,27 @@ export default function AdminPage() {
               </label>
 
               <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék neve</span>
+                <input
+                  value={productForm.product_title}
+                  onChange={(event) => setProductForm((current) => ({ ...current, product_title: event.target.value }))}
+                  placeholder="Példa termék"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Normál ár (Ft)</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={productForm.price}
+                  onChange={(event) => setProductForm((current) => ({ ...current, price: Number(event.target.value) }))}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block xl:col-span-1">
                 <span className="mb-2 block text-sm font-medium text-[#4c453d]">Akciós ár (Ft)</span>
                 <input
                   type="number"
@@ -1432,16 +1444,28 @@ export default function AdminPage() {
               </label>
 
               <label className="block xl:col-span-1">
-                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék név</span>
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Készlet (db)</span>
                 <input
-                  value={productForm.product_title}
-                  onChange={(event) => setProductForm((current) => ({ ...current, product_title: event.target.value }))}
-                  placeholder="Példa termék"
+                  type="number"
+                  min={0}
+                  value={productForm.stock}
+                  onChange={(event) => setProductForm((current) => ({ ...current, stock: Number(event.target.value) }))}
                   className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
                 />
               </label>
 
-              <div className="flex items-end justify-between gap-3 xl:col-span-1">
+              <label className="block md:col-span-2 xl:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Leírás</span>
+                <textarea
+                  value={productForm.description}
+                  onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))}
+                  rows={2}
+                  placeholder="Termékleírás"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <div className="flex items-end justify-between gap-3 xl:col-span-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-[#4c453d]">
                   <input
                     type="checkbox"
@@ -1530,7 +1554,9 @@ export default function AdminPage() {
                       onClick={() => setProductForm({
                         product_id: product.id,
                         product_title: product.title,
+                        price: Number(product.price ?? 0),
                         sale_price: Number(product.sale_price ?? 0),
+                        stock: Number(product.stock ?? 0),
                         is_out_of_stock: Boolean(product.is_out_of_stock),
                         description: product.description ?? '',
                       })}

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getAdminPocketBaseClient } from '@/lib/pocketbase';
 
 export type OrderEmailInput = {
   id?: string;
@@ -28,6 +29,10 @@ export type SendTransactionalEmailOptions = {
   html?: string;
   replyTo?: string;
   from?: string;
+  orderId?: string;
+  customerName?: string;
+  emailType?: 'customer' | 'admin' | 'invoice';
+  dedupeKey?: string;
 };
 
 export const BRAND_NAME = 'Zsül Portékái';
@@ -198,6 +203,7 @@ async function sendViaSmtp({ to, subject, text, html, replyTo, from }: SendTrans
 export async function sendTransactionalEmail(options: SendTransactionalEmailOptions) {
   const resendResult = await sendViaResend(options).catch(() => null);
   if (resendResult) {
+    await logEmailDelivery(options, 'resend');
     return { sent: true, provider: 'resend' };
   }
 
@@ -207,10 +213,49 @@ export async function sendTransactionalEmail(options: SendTransactionalEmailOpti
   });
 
   if (smtpResult) {
+    await logEmailDelivery(options, 'smtp');
     return { sent: true, provider: 'smtp' };
   }
 
   return { sent: false, reason: 'missing_email_provider' };
+}
+
+async function logEmailDelivery(options: SendTransactionalEmailOptions, provider: string) {
+  if (!options.orderId || !options.emailType) return;
+
+  try {
+    const adminPb = await getAdminPocketBaseClient();
+    if (!adminPb) return;
+
+    await adminPb.collection('email_logs').create({
+      order_id: options.orderId,
+      customer_name: options.customerName || '',
+      recipient: options.to,
+      type: options.emailType,
+      sent_at: new Date().toISOString(),
+      subject: options.subject,
+      body: options.text,
+      from_address: options.from || '',
+      provider,
+      dedupe_key: options.dedupeKey || '',
+    });
+  } catch (error) {
+    console.error('E-mail napló mentése sikertelen:', error);
+  }
+}
+
+export async function hasEmailLog(dedupeKey: string) {
+  try {
+    const adminPb = await getAdminPocketBaseClient();
+    if (!adminPb) return false;
+    const records = await adminPb.collection('email_logs').getList(1, 1, {
+      filter: `dedupe_key = "${dedupeKey.replace(/"/g, '\\"')}"`,
+    });
+    return records.items.length > 0;
+  } catch (error) {
+    console.error('E-mail napló ellenőrzése sikertelen:', error);
+    return false;
+  }
 }
 
 const buildOrderConfirmationBody = (order: OrderEmailInput) => {
@@ -325,6 +370,10 @@ export async function sendOrderEmails(order: OrderEmailInput) {
       text: customerText,
       html: customerHtml,
       replyTo: BRAND_SUPPORT_EMAIL,
+      orderId,
+      customerName: customerDisplayName,
+      emailType: 'customer',
+      dedupeKey: `${orderId}:confirmation:customer`,
     });
   }
 
@@ -335,6 +384,10 @@ export async function sendOrderEmails(order: OrderEmailInput) {
       text: `${customerText}\n\nA rendelést a weboldal admin felületén is ellenőrizhető.`,
       html: adminHtml,
       replyTo: BRAND_SUPPORT_EMAIL,
+      orderId,
+      customerName: customerDisplayName,
+      emailType: 'admin',
+      dedupeKey: `${orderId}:confirmation:admin`,
     });
   }
 
@@ -413,6 +466,10 @@ export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pend
     text: `${config.label}\n\n${config.intro}\n\nMegrendelés: #${order.id ?? 'ismeretlen'}\nVevő: ${getCustomerDisplayName(order)}`,
     html,
     replyTo: BRAND_SUPPORT_EMAIL,
+    orderId: String(order.id ?? ''),
+    customerName: getCustomerDisplayName(order),
+    emailType: 'customer',
+    dedupeKey: `${String(order.id ?? '')}:status:${status}`,
   });
 }
 

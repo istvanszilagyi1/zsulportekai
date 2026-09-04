@@ -52,6 +52,7 @@ export async function POST(request: Request) {
         foxpost_place_name: order.foxpost_place_name ? String(order.foxpost_place_name) : undefined,
         foxpost_place_address: order.foxpost_place_address ? String(order.foxpost_place_address) : undefined,
         shipping_address: order.shipping_address ? String(order.shipping_address) : undefined,
+        status: normalizedStatus,
       },
       normalizedStatus as 'pending' | 'paid' | 'processing' | 'shipped' | 'completed' | 'cancelled' | 'refunded',
     );

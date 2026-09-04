@@ -902,8 +902,8 @@ export default function HomePage() {
 
                 <ul className="mt-6 space-y-4 text-sm leading-7 text-[#4b453f]">
                   <li><strong className="font-semibold text-[#2a2723]">Minden hónap első szombatján:</strong> Debrecen Liget tér 8–11.30, Debrecen Kerekestelep Platán hotel melletti játszótér 8–11.30</li>
-                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap második szombatján:</strong> Debrecen Ruyter utca, Derce pékműhely udvara 8–11.30; Hajdúböszörmény Fürdőkerti vásár, Bíró Péter utca 7–12; Újfehértó Zsindelyes Cottage termelői piac 8–11.30</li>
                   <li><strong className="font-semibold text-[#2a2723]">Minden hónap második péntekjén:</strong> Hajdúböszörmény Ady téri piac 7–11</li>
+                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap második szombatján:</strong> Debrecen Ruyter utca, Derce pékműhely udvara 8–11.30; Hajdúböszörmény Fürdőkerti vásár, Bíró Péter utca 7–12; Újfehértó Zsindelyes Cottage termelői piac 8–11.30</li>
                   <li><strong className="font-semibold text-[#2a2723]">Minden hónap harmadik szombatján:</strong> Debrecen Leány utca 2, egyháztáji vásár 8–11.30</li>
                   <li><strong className="font-semibold text-[#2a2723]">Minden vasárnap:</strong> Balmazújvárosi piac 7–11</li>
                 </ul>

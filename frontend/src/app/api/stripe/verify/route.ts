@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { sendOrderStatusEmail } from '@/lib/email';
+import { hasEmailLog, sendOrderStatusEmail } from '@/lib/email';
 import { stripe } from '@/lib/stripe';
 import { updateOrderRecord } from '@/lib/pocketbase';
 
@@ -41,13 +41,14 @@ export async function GET(request: Request) {
     const isPaid = isStripeSessionPaid(session);
 
     if (isPaid) {
+      const paidEmailAlreadyLogged = await hasEmailLog(`${orderId}:status:paid`);
       const order = await updateOrderRecord(orderId, {
         payment_status: 'paid',
         status: 'paid',
         stripe_session_id: session.id,
       });
 
-      if (order) {
+      if (order && !paidEmailAlreadyLogged) {
         await sendOrderStatusEmail(
           {
             id: String(order.id),
@@ -96,13 +97,14 @@ export async function POST(request: Request) {
       const orderId = session.metadata?.orderId;
 
       if (orderId) {
+        const paidEmailAlreadyLogged = await hasEmailLog(`${orderId}:status:paid`);
         const order = await updateOrderRecord(orderId, {
           payment_status: 'paid',
           status: 'paid',
           stripe_session_id: session.id,
         });
 
-        if (order) {
+        if (order && !paidEmailAlreadyLogged) {
           await sendOrderStatusEmail(
             {
               id: String(order.id),

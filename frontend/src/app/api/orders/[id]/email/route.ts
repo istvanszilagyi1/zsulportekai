@@ -18,6 +18,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Hiányzó címzett vagy levél szöveg.' }, { status: 400 });
     }
 
+    const order = await pb.collection('orders').getOne(id).catch(() => null);
     const emailResult = await sendTransactionalEmail({
       to,
       subject,
@@ -25,13 +26,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #201d1a;"><p>${text.replace(/\n/g, '<br />')}</p></div>`,
       replyTo,
       from: fromAddress,
+      orderId: id,
+      customerName: order?.customer_name ? String(order.customer_name) : '',
+      emailType: 'customer',
     });
 
     if (!emailResult.sent) {
       throw new Error(emailResult.reason || 'Email delivery failed');
     }
 
-    const order = await pb.collection('orders').getOne(id).catch(() => null);
     const sentAt = new Date().toISOString();
 
     return NextResponse.json({

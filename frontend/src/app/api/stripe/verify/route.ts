@@ -48,7 +48,15 @@ export async function GET(request: Request) {
         stripe_session_id: session.id,
       });
 
-      if (order && !paidEmailAlreadyLogged) {
+      if (!order) {
+        return NextResponse.json({
+          error: 'A Stripe fizetés sikeres, de a rendelés státusza nem menthető. Állítsd be a PocketBase szerveradmin hitelesítését.',
+          paid: true,
+          orderId,
+        }, { status: 503 });
+      }
+
+      if (!paidEmailAlreadyLogged) {
         await sendOrderStatusEmail(
           {
             id: String(order.id),

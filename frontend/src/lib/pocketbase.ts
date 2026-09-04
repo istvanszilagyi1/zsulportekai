@@ -44,18 +44,23 @@ const pocketbaseUrl = getPocketBaseBaseUrl();
 export const pb = new PocketBase(pocketbaseUrl);
 
 export async function getAdminPocketBaseClient() {
+  const adminToken = process.env.POCKETBASE_ADMIN_TOKEN;
   const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL || process.env.POCKETBASE_EMAIL || process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
   const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD || process.env.POCKETBASE_PASSWORD || process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
-  if (!adminEmail || !adminPassword) {
-    console.warn('PocketBase admin credentials are missing; Stripe verification and admin updates will be skipped until the env vars are configured.');
+  if (!adminToken && (!adminEmail || !adminPassword)) {
+    console.error('PocketBase admin credentials are missing; Stripe verification cannot persist payment status or email logs.');
     return null;
   }
 
   const adminPb = new PocketBase(getPocketBaseBaseUrl());
 
   try {
-    await adminPb.admins.authWithPassword(adminEmail, adminPassword);
+    if (adminToken) {
+      adminPb.authStore.save(adminToken, null);
+    } else {
+      await adminPb.admins.authWithPassword(adminEmail!, adminPassword!);
+    }
     return adminPb;
   } catch (error) {
     console.error('PocketBase admin authentication failed:', error);
@@ -67,7 +72,6 @@ export async function updateOrderRecord(orderId: string, payload: Record<string,
   const adminPb = await getAdminPocketBaseClient();
 
   if (!adminPb) {
-    console.warn('PocketBase admin credentials are missing; skipping order update for Stripe flow.', { orderId, payload });
     return null;
   }
 

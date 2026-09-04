@@ -83,7 +83,7 @@ export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
               <Check className="h-5 w-5" strokeWidth={2.5} />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8a806d]">
                 Kiválasztott átvételi pont
               </p>
@@ -93,7 +93,7 @@ export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
                 {selected.name}
               </p>
 
-              <p className="mt-1 pl-6 text-sm leading-5 text-[#777166]">
+              <p className="mt-1 break-words pl-6 text-sm leading-5 text-[#777166]">
                 {selected.address}
               </p>
             </div>
@@ -121,7 +121,7 @@ export default function FoxpostPicker({ value, onSelect }: FoxpostPickerProps) {
           <iframe
             src="https://cdn.foxpost.hu/apt-finder/v1/app/"
             title="Foxpost automata kiválasztó"
-            className="h-[550px] w-full border-0 bg-white sm:h-[650px]"
+            className="h-[min(72vh,550px)] w-full border-0 bg-white sm:h-[650px]"
             loading="lazy"
             allow="clipboard-write"
           />

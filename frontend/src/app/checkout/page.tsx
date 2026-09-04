@@ -425,24 +425,24 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-[#f7f4ed] text-[#27251f]">
       <Header />
 
-      <main className="mx-auto max-w-[1280px] px-6 py-10 sm:px-10 lg:px-16 lg:py-14">
-        <div className="mb-8">
+      <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-10 sm:py-10 lg:px-16 lg:py-14">
+        <div className="mb-6 sm:mb-8">
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">
             01 — Pénztár
           </p>
-          <h1 className="mt-4 text-4xl font-medium tracking-[-0.06em] text-[#2c2924] sm:text-5xl lg:text-6xl">
+          <h1 className="mt-3 text-3xl font-medium tracking-[-0.06em] text-[#2c2924] sm:mt-4 sm:text-5xl lg:text-6xl">
             Rendelés és szállítás
           </h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1.35fr_0.65fr]">
-          <div className="space-y-6">
-            <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.05)] sm:p-8">
-              <div className="mb-6 flex items-center gap-3">
+        <form onSubmit={handleSubmit} className="grid min-w-0 gap-6 lg:grid-cols-[1.35fr_0.65fr] lg:gap-8">
+          <div className="min-w-0 space-y-6">
+            <section className="min-w-0 rounded-[22px] border border-[#e3ded3] bg-white p-4 shadow-[0_18px_40px_rgba(35,28,21,0.05)] sm:rounded-[28px] sm:p-8">
+              <div className="mb-5 flex items-center gap-3 sm:mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3ecdf] text-[#675f54]">
                   <UserRound className="h-5 w-5" />
                 </div>
-                <h2 className="text-2xl font-medium tracking-[-0.04em] text-[#2d2922]">
+                <h2 className="min-w-0 text-xl font-medium tracking-[-0.04em] text-[#2d2922] sm:text-2xl">
                   Vevő adatai
                 </h2>
               </div>
@@ -503,17 +503,17 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.05)] sm:p-8">
-              <div className="mb-6 flex items-center gap-3">
+            <section className="min-w-0 rounded-[22px] border border-[#e3ded3] bg-white p-4 shadow-[0_18px_40px_rgba(35,28,21,0.05)] sm:rounded-[28px] sm:p-8">
+              <div className="mb-5 flex items-center gap-3 sm:mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3ecdf] text-[#675f54]">
                   <Truck className="h-5 w-5" />
                 </div>
-                <h2 className="text-2xl font-medium tracking-[-0.04em] text-[#2d2922]">
+                <h2 className="min-w-0 text-xl font-medium tracking-[-0.04em] text-[#2d2922] sm:text-2xl">
                   Szállítási mód
                 </h2>
               </div>
 
-              <div className="mb-5 rounded-[20px] border border-[#e7e0d4] bg-[#faf8f4] p-4 text-sm leading-6 text-[#5e564d]">
+              <div className="mb-5 rounded-[20px] border border-[#e7e0d4] bg-[#faf8f4] p-4 text-sm leading-6 text-[#5e564d] [overflow-wrap:anywhere]">
                 A Foxpost automata kiválasztásánál a legközelebbi átvételi pontot választhatod ki a megjelenő alkalmazásban. A kiválasztott hely automatikusan mentésre kerül a rendeléshez.
               </div>
 
@@ -524,7 +524,7 @@ export default function CheckoutPage() {
                   return (
                     <label
                       key={value}
-                      className={`flex cursor-pointer items-start gap-4 rounded-[22px] border p-4 transition ${
+                      className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-[22px] border p-3 transition sm:gap-4 sm:p-4 ${
                         selected
                           ? 'border-[#2d2922] bg-[#f8f4ef] shadow-[0_10px_25px_rgba(45,41,34,0.06)]'
                           : 'border-[#dfd7cc] bg-[#faf8f5] hover:border-[#cfc2a9]'
@@ -543,9 +543,9 @@ export default function CheckoutPage() {
                         <Icon className="h-4 w-4" />
                       </span>
 
-                      <span className="flex-1">
+                      <span className="min-w-0 flex-1">
                         <span className="block text-base font-medium text-[#2d2922]">{label}</span>
-                        <span className="mt-1 block text-sm leading-6 text-[#706a63]">
+                        <span className="mt-1 block text-sm leading-6 text-[#706a63] [overflow-wrap:anywhere]">
                           {description}
                         </span>
                       </span>
@@ -627,12 +627,12 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.05)] sm:p-8">
-              <div className="mb-6 flex items-center gap-3">
+            <section className="min-w-0 rounded-[22px] border border-[#e3ded3] bg-white p-4 shadow-[0_18px_40px_rgba(35,28,21,0.05)] sm:rounded-[28px] sm:p-8">
+              <div className="mb-5 flex items-center gap-3 sm:mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3ecdf] text-[#675f54]">
                   <CreditCard className="h-5 w-5" />
                 </div>
-                <h2 className="text-2xl font-medium tracking-[-0.04em] text-[#2d2922]">
+                <h2 className="min-w-0 text-xl font-medium tracking-[-0.04em] text-[#2d2922] sm:text-2xl">
                   Fizetési mód
                 </h2>
               </div>
@@ -644,7 +644,7 @@ export default function CheckoutPage() {
                   return (
                     <label
                       key={value}
-                      className={`flex cursor-pointer items-start gap-4 rounded-[22px] border p-4 transition ${
+                      className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-[22px] border p-3 transition sm:gap-4 sm:p-4 ${
                         selected
                           ? 'border-[#2d2922] bg-[#f8f4ef] shadow-[0_10px_25px_rgba(45,41,34,0.06)]'
                           : 'border-[#dfd7cc] bg-[#faf8f5] hover:border-[#cfc2a9]'
@@ -663,9 +663,9 @@ export default function CheckoutPage() {
                         <Icon className="h-4 w-4" />
                       </span>
 
-                      <span className="flex-1">
+                      <span className="min-w-0 flex-1">
                         <span className="block text-base font-medium text-[#2d2922]">{label}</span>
-                        <span className="mt-1 block text-sm leading-6 text-[#706a63]">
+                        <span className="mt-1 block text-sm leading-6 text-[#706a63] [overflow-wrap:anywhere]">
                           {description}
                         </span>
                       </span>
@@ -783,13 +783,13 @@ export default function CheckoutPage() {
             </section>
           </div>
 
-          <aside className="lg:pt-2">
-            <div className="rounded-[28px] border border-[#e3ded3] bg-[#f9f5ef] p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)] sm:p-7">
+          <aside className="min-w-0 lg:pt-2">
+            <div className="rounded-[22px] border border-[#e3ded3] bg-[#f9f5ef] p-4 shadow-[0_18px_40px_rgba(35,28,21,0.04)] sm:rounded-[28px] sm:p-7">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#efe7db] text-[#4a4339]">
                   <Check className="h-5 w-5" />
                 </div>
-                <h2 className="text-2xl font-medium tracking-[-0.04em] text-[#2d2922]">
+                <h2 className="min-w-0 text-xl font-medium tracking-[-0.04em] text-[#2d2922] sm:text-2xl">
                   Rendelési összesítő
                 </h2>
               </div>
@@ -805,7 +805,7 @@ export default function CheckoutPage() {
                         <img
                           src={resolveProductImage(product, '/placeholder.png')}
                           alt={product.title}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain p-1"
                           onError={(event) => {
                             event.currentTarget.src = '/placeholder.png';
                           }}
@@ -813,7 +813,7 @@ export default function CheckoutPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[#2d2922]">{product.title}</p>
+                        <p className="break-words text-sm font-medium text-[#2d2922]">{product.title}</p>
                         <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[#7c7369]">
                           Mennyiség: {quantity}
                         </p>
@@ -862,7 +862,7 @@ export default function CheckoutPage() {
 
               <div className="mt-5 rounded-[22px] border border-[#e3ded3] bg-white p-4">
                 <label className="block text-sm font-medium text-[#4c453d]">Kuponkód</label>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <input
                     value={formData.couponCode}
                     onChange={(event) => {
@@ -881,7 +881,7 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={handleApplyCoupon}
                     disabled={isCheckingCoupon || !formData.couponCode.trim()}
-                    className="rounded-full bg-[#2d2922] px-3.5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:bg-[#a49d93]"
+                    className="shrink-0 rounded-full bg-[#2d2922] px-3.5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:bg-[#a49d93]"
                   >
                     {isCheckingCoupon ? '...' : 'Érvényesít'}
                   </button>

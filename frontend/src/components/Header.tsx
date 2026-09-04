@@ -227,7 +227,7 @@ export default function Header() {
                     <img
                       src={resolveProductImage(product, logoUrl)}
                       alt={product.title}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain p-1"
                     />
                   </div>
 

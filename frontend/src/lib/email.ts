@@ -199,7 +199,7 @@ async function sendViaResend({ to, subject, text, html, replyTo, from }: SendTra
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: from || process.env.EMAIL_FROM || `${BRAND_NAME} <noreply@zsulportekai.hu>`,
+      from: from || process.env.RESEND_FROM || process.env.EMAIL_FROM || `${BRAND_NAME} <noreply@zsulportekai.hu>`,
       to: [to],
       reply_to: replyTo || process.env.EMAIL_REPLY_TO || BRAND_SUPPORT_EMAIL,
       subject,
@@ -237,13 +237,20 @@ async function sendViaSmtp({ to, subject, text, html, replyTo, from }: SendTrans
 }
 
 export async function sendTransactionalEmail(options: SendTransactionalEmailOptions) {
-  const resendResult = await sendViaResend(options).catch(() => null);
+  let resendError: unknown = null;
+  const resendResult = await sendViaResend(options).catch((error) => {
+    resendError = error;
+    console.error('Resend email delivery failed:', error);
+    return null;
+  });
   if (resendResult) {
     await logEmailDelivery(options, 'resend');
     return { sent: true, provider: 'resend' };
   }
 
+  let smtpError: unknown = null;
   const smtpResult = await sendViaSmtp(options).catch((error) => {
+    smtpError = error;
     console.error('SMTP email delivery failed:', error);
     return null;
   });
@@ -251,6 +258,17 @@ export async function sendTransactionalEmail(options: SendTransactionalEmailOpti
   if (smtpResult) {
     await logEmailDelivery(options, 'smtp');
     return { sent: true, provider: 'smtp' };
+  }
+
+  if (resendError || smtpError) {
+    const errors = [resendError, smtpError]
+      .filter((error): error is Error => error instanceof Error)
+      .map((error) => error.message);
+
+    return {
+      sent: false,
+      reason: errors.join(' | ') || 'email_delivery_failed',
+    };
   }
 
   return { sent: false, reason: 'missing_email_provider' };

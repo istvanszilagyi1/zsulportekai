@@ -91,13 +91,19 @@ export async function POST(request: Request) {
       shipping_address: typeof orderPayload.shipping_address === 'string' ? orderPayload.shipping_address : undefined,
     };
 
+    let emailResult: Awaited<ReturnType<typeof sendOrderEmails>> = { sent: false, reason: 'email_not_attempted' };
+
     try {
-      await sendOrderEmails(emailPayload);
+      emailResult = await sendOrderEmails(emailPayload);
     } catch (emailError) {
       console.error('Order email sending failed after successful order creation:', emailError);
     }
 
-    return NextResponse.json({ ok: true, order: createdOrder }, { status: 201 });
+    if (!emailResult.sent) {
+      console.error('Order email was not sent:', emailResult);
+    }
+
+    return NextResponse.json({ ok: true, order: createdOrder, email: emailResult }, { status: 201 });
   } catch (error) {
     console.error('Order creation failed:', error);
     return NextResponse.json({ error: 'A rendelés mentése sikertelen volt.' }, { status: 500 });

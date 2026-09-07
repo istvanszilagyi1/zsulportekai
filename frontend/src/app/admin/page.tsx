@@ -49,6 +49,10 @@ type OrderRecord = {
   status: OrderStatus;
   total_price?: number;
   items?: Array<{ title?: string; quantity?: number; price?: number }>;
+  coupon_code?: string;
+  coupon_discount_percent?: number;
+  coupon_discount_amount?: number;
+  coupon_product_title?: string;
   foxpost_place_id?: string;
   foxpost_place_name?: string;
   foxpost_place_address?: string;
@@ -188,7 +192,7 @@ const buildFullName = (firstName?: string, lastName?: string) => {
   if (!first && !last) return '';
   if (!first) return last;
   if (!last) return first;
-  return `${first} ${last}`;
+  return `${last} ${first}`;
 };
 
 const getNextStatusForOrder = (order: OrderRecord): OrderStatus => {
@@ -668,6 +672,8 @@ export default function AdminPage() {
 
       const payload = {
         customer_name: nextCustomerName || editingOrder.customer_name,
+        customer_first_name: editingOrder.customer_first_name ?? splitCustomerName(editingOrder.customer_name).firstName,
+        customer_last_name: editingOrder.customer_last_name ?? splitCustomerName(editingOrder.customer_name).lastName,
         customer_email: editingOrder.customer_email,
         customer_phone: editingOrder.customer_phone,
         delivery_method: editingOrder.delivery_method,
@@ -689,18 +695,7 @@ export default function AdminPage() {
       const previousStatus = getOrderStatusValue(editingOrder);
       const updated = await pb.collection('orders').update(editingOrder.id, payload);
       const refreshed = await pb.collection('orders').getOne(editingOrder.id).catch(() => updated);
-      const updatedOrder = refreshed as unknown as OrderRecord;
-      const normalized = {
-        ...updatedOrder,
-        customer_first_name: splitCustomerName(updatedOrder.customer_name).firstName,
-        customer_last_name: splitCustomerName(updatedOrder.customer_name).lastName,
-        customer_name: buildFullName(
-          splitCustomerName(updatedOrder.customer_name).firstName,
-          splitCustomerName(updatedOrder.customer_name).lastName,
-        ) || updatedOrder.customer_name,
-        status: getOrderStatusValue(updatedOrder),
-        payment_status: updatedOrder.payment_status ?? derivePaymentStatus(getOrderStatusValue(updatedOrder)),
-      };
+      const normalized = normalizeFetchedOrder(refreshed as unknown as Partial<OrderRecord> & Record<string, unknown>);
 
       if (previousStatus !== normalized.status) {
         const emailStatus = normalized.status === 'cancelled' || normalized.status === 'refunded' ? 'cancelled' : normalized.status;
@@ -1009,7 +1004,59 @@ export default function AdminPage() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="space-y-3">
+              <div className="space-y-4">
+                <div className="rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-[#2d2922]">Rendelt termékek</h3>
+                    <span className="text-xs text-[#6b625b]">
+                      {selectedOrder.items?.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0) ?? 0} db
+                    </span>
+                  </div>
+                  {!selectedOrder.items?.length ? (
+                    <p className="text-sm text-[#6b625b]">A rendeléshez nem tartozik termékadat.</p>
+                  ) : (
+                    <div className="divide-y divide-[#e8dfd0]">
+                      {selectedOrder.items.map((item, index) => (
+                        <div key={`${item.title ?? 'termék'}-${index}`} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-[#2d2922]">{item.title || 'Ismeretlen termék'}</p>
+                            <p className="mt-1 text-xs text-[#6b625b]">{Number(item.quantity ?? 0)} db × {fmtMoney(item.price)}</p>
+                          </div>
+                          <p className="shrink-0 font-semibold text-[#2d2922]">{fmtMoney(Number(item.price ?? 0) * Number(item.quantity ?? 0))}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                  <h3 className="text-lg font-semibold text-[#2d2922]">Kupon és összesítés</h3>
+                  <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#827a6d]">Kuponkód</p>
+                      <p className="mt-1 font-medium text-[#2d2922]">{selectedOrder.coupon_code || 'Nem használt kupont'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#827a6d]">Kedvezmény</p>
+                      <p className="mt-1 font-medium text-[#2d2922]">
+                        {selectedOrder.coupon_code
+                          ? `${Number(selectedOrder.coupon_discount_percent ?? 0)}%${selectedOrder.coupon_discount_amount ? `, ${fmtMoney(selectedOrder.coupon_discount_amount)}` : ''}`
+                          : '-'}
+                      </p>
+                    </div>
+                    {selectedOrder.coupon_product_title && (
+                      <div className="sm:col-span-2">
+                        <p className="text-xs uppercase tracking-[0.12em] text-[#827a6d]">Kedvezményes termék</p>
+                        <p className="mt-1 font-medium text-[#2d2922]">{selectedOrder.coupon_product_title}</p>
+                      </div>
+                    )}
+                    <div className="sm:col-span-2 border-t border-[#e8dfd0] pt-3">
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#827a6d]">Végösszeg</p>
+                      <p className="mt-1 text-xl font-semibold text-[#2d2922]">{fmtMoney(selectedOrder.total_price)}</p>
+                    </div>
+                  </div>
+                </div>
+
                 {selectedOrderEmails.length === 0 ? (
                   <div className="rounded-[20px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-5 text-sm text-[#5d564f]">
                     Még nincs elküldött e-mail ehhez a rendeléshez.

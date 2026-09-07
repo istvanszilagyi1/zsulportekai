@@ -1223,7 +1223,7 @@ export default function HomePage() {
       ========================================================== */}
       <footer className="bg-[#24221d] px-6 py-14 text-[#f4f0e7] sm:px-10 lg:px-16 lg:py-20">
         <div className="mx-auto max-w-[1250px]">
-          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.9fr_1fr] lg:gap-12">
+          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.9fr_0.9fr_1fr] lg:gap-10">
             <div>
               <div className="inline-flex items-center justify-start rounded-full border border-white/10 bg-white/3 px-3 py-2">
                 <img
@@ -1246,6 +1246,7 @@ export default function HomePage() {
               </p>
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
+                <p>Név: Horvát-Katona Fruzsina</p>
                 <p>Cím: 4220 Hajdúböszörmény, Kisböszörmény utca 3.</p>
                 <a href="tel:+36703682132" className="block transition hover:text-white">
                   Telefon: +36 70 368 2132
@@ -1263,6 +1264,18 @@ export default function HomePage() {
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
+                VÁLLALKOZÁSI ADATOK:
+              </p>
+
+              <div className="mt-6 space-y-3 text-sm text-white/65">
+                <p>Bay Katalin</p>
+                <p>4220 Hajdúböszörmény, Külső-Debreceni utca 42.</p>
+                <p>Adószám: 54924497-1-29</p>
               </div>
             </div>
 

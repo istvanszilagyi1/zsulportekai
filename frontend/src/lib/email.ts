@@ -39,6 +39,13 @@ export const BRAND_NAME = 'Zsül Portékái';
 export const BRAND_LOGO_URL = 'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 export const BRAND_SUPPORT_EMAIL = 'zsulportekai@gmail.com';
 
+const BANK_TRANSFER_DETAILS = {
+  accountHolder: 'Bay Katalin',
+  iban: 'HU42612002851444574100000000',
+  accountNumber: '6120028514445741',
+  bank: 'Magnet Bank',
+};
+
 const formatMoney = (value: number) => `${Number(value || 0).toLocaleString('hu-HU')} Ft`;
 
 const escapeHtml = (value: string) => value
@@ -86,6 +93,35 @@ const getCustomerDisplayName = (order: OrderEmailInput) => {
   }
 
   return (order.customer_name ?? '').trim() || 'N/A';
+};
+
+const buildBankTransferHtml = (order: OrderEmailInput) => {
+  if (order.payment_method !== 'bank_transfer') return '';
+
+  return `
+    <div style="background:#f1f7f1;border:1px solid #d7e8d8;border-radius:16px;padding:18px;margin:0 0 18px;">
+      <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#285234;">Banki átutalás</p>
+      <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#3f5b46;">Kérjük, a rendelés végösszegét 48 órán belül utald át az alábbi bankszámlára. A rendelés feldolgozását az összeg beérkezése után kezdjük meg.</p>
+      <p style="margin:0 0 6px;font-size:14px;line-height:1.7;color:#3f5b46;"><strong>Kedvezményezett:</strong> ${BANK_TRANSFER_DETAILS.accountHolder}</p>
+      <p style="margin:0 0 6px;font-size:14px;line-height:1.7;color:#3f5b46;"><strong>IBAN:</strong> ${BANK_TRANSFER_DETAILS.iban}</p>
+      <p style="margin:0 0 6px;font-size:14px;line-height:1.7;color:#3f5b46;"><strong>Számlaszám:</strong> ${BANK_TRANSFER_DETAILS.accountNumber}</p>
+      <p style="margin:0;font-size:14px;line-height:1.7;color:#3f5b46;"><strong>Bank:</strong> ${BANK_TRANSFER_DETAILS.bank}</p>
+    </div>
+  `;
+};
+
+const buildBankTransferText = (order: OrderEmailInput) => {
+  if (order.payment_method !== 'bank_transfer') return [];
+
+  return [
+    '',
+    'Banki átutalás:',
+    'Kérjük, a rendelés végösszegét 48 órán belül utald át az alábbi bankszámlára. A rendelés feldolgozását az összeg beérkezése után kezdjük meg.',
+    `Kedvezményezett: ${BANK_TRANSFER_DETAILS.accountHolder}`,
+    `IBAN: ${BANK_TRANSFER_DETAILS.iban}`,
+    `Számlaszám: ${BANK_TRANSFER_DETAILS.accountNumber}`,
+    `Bank: ${BANK_TRANSFER_DETAILS.bank}`,
+  ];
 };
 
 const renderEmailLayout = ({
@@ -281,6 +317,8 @@ const buildOrderConfirmationBody = (order: OrderEmailInput) => {
         </table>
       </div>
 
+      ${buildBankTransferHtml(order)}
+
       <table style="width:100%;border-collapse:collapse;margin:6px 0 18px;background:#ffffff;border:1px solid #eee2d5;border-radius:12px;overflow:hidden;">
         <thead>
           <tr style="background:#f6f0e8;">
@@ -316,6 +354,7 @@ const buildOrderStatusBody = (order: OrderEmailInput, statusLabel: string, statu
         <p style="margin:0 0 8px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#4d7b60;font-weight:700;">Státusz</p>
         <h2 style="margin:0;color:#1d4d2a;font-size:28px;line-height:1.2;">${statusLabel}</h2>
       </div>
+      ${buildBankTransferHtml(order)}
       <div style="background:#faf7f3;border:1px solid #efe4d4;border-radius:16px;padding:16px 18px;">
         <p style="margin:0 0 10px;font-size:15px;line-height:1.7;color:#3d3935;">${statusMessage}</p>
         <p style="margin:0 0 9px;font-size:14px;line-height:1.8;color:#4b4641;"><strong>Megrendelés:</strong> #${escapeHtml(String(orderId))}</p>
@@ -349,6 +388,7 @@ export async function sendOrderEmails(order: OrderEmailInput) {
     `Fizetési mód: ${order.payment_method === 'stripe' ? 'Online fizetés' : 'Banki átutalás'}`,
     `Szállítás: ${buildDeliveryText(order)}`,
     `Végösszeg: ${formatMoney(Number(order.total_price ?? 0))}`,
+    ...buildBankTransferText(order),
     'A rendelés feldolgozását követően értesítünk a további lépésekről.',
     `Üdvözlettel: ${BRAND_NAME}`,
   ].join('\n');
@@ -463,7 +503,15 @@ export async function sendOrderStatusEmail(order: OrderEmailInput, status: 'pend
   return sendTransactionalEmail({
     to: customerEmail,
     subject: config.subject,
-    text: `${config.label}\n\n${config.intro}\n\nMegrendelés: #${order.id ?? 'ismeretlen'}\nVevő: ${getCustomerDisplayName(order)}`,
+    text: [
+      config.label,
+      '',
+      config.intro,
+      '',
+      `Megrendelés: #${order.id ?? 'ismeretlen'}`,
+      `Vevő: ${getCustomerDisplayName(order)}`,
+      ...buildBankTransferText(order),
+    ].join('\n'),
     html,
     replyTo: BRAND_SUPPORT_EMAIL,
     orderId: String(order.id ?? ''),

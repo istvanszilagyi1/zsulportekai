@@ -10,6 +10,7 @@ import {
   LockKeyhole,
   LogOut,
   MailCheck,
+  Package,
   Search,
   X,
 } from 'lucide-react';
@@ -1228,6 +1229,14 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={() => setSelectedOrderId(order.id)}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#d9d0c2] bg-[#eef7f1] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#276342] hover:border-[#4d9a6d]"
+                            >
+                              <Package className="h-3.5 w-3.5" />
+                              Részletek
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrderId(order.id)}
                               className="inline-flex items-center gap-1 rounded-full border border-[#d9d0c2] bg-[#f0f6ff] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#264d9f] hover:border-[#4b7de7]"
                             >
                               <MailCheck className="h-3.5 w-3.5" />
@@ -1640,6 +1649,40 @@ export default function AdminPage() {
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-5">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                  <h3 className="text-lg font-semibold text-[#2d2922]">Rendelt termékek</h3>
+                  {!editingOrder.items?.length ? (
+                    <p className="mt-3 text-sm text-[#6b625b]">A rendeléshez nem tartozik termékadat.</p>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {editingOrder.items.map((item, index) => (
+                        <div key={`${item.title ?? 'termék'}-${index}`} className="flex items-center justify-between gap-3 border-b border-[#e8dfd0] pb-2 text-sm last:border-0 last:pb-0">
+                          <span className="min-w-0 truncate text-[#2d2922]">{item.title || 'Ismeretlen termék'} × {Number(item.quantity ?? 0)}</span>
+                          <span className="shrink-0 font-semibold text-[#2d2922]">{fmtMoney(Number(item.price ?? 0) * Number(item.quantity ?? 0))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-[20px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                  <h3 className="text-lg font-semibold text-[#2d2922]">Kupon és összesítés</h3>
+                  <p className="mt-3 text-sm text-[#4c453d]">
+                    Kupon: <strong>{editingOrder.coupon_code || 'Nem használt kupont'}</strong>
+                  </p>
+                  {editingOrder.coupon_code && (
+                    <p className="mt-1 text-sm text-[#4c453d]">
+                      Kedvezmény: <strong>{Number(editingOrder.coupon_discount_percent ?? 0)}%{editingOrder.coupon_discount_amount ? `, ${fmtMoney(editingOrder.coupon_discount_amount)}` : ''}</strong>
+                    </p>
+                  )}
+                  {editingOrder.coupon_product_title && (
+                    <p className="mt-1 text-sm text-[#4c453d]">Termék: <strong>{editingOrder.coupon_product_title}</strong></p>
+                  )}
+                  <p className="mt-3 border-t border-[#e8dfd0] pt-3 text-lg font-semibold text-[#2d2922]">Végösszeg: {fmtMoney(editingOrder.total_price)}</p>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-[#4c453d]">Vezetéknév</span>

@@ -1246,7 +1246,7 @@ export default function HomePage() {
               </p>
 
               <div className="mt-6 space-y-3 text-sm text-white/65">
-                <p>Név: Horvát-Katona Fruzsina</p>
+                <p>Név: Horváth-Katona Fruzsina</p>
                 <p>Cím: 4220 Hajdúböszörmény, Kisböszörmény utca 3.</p>
                 <a href="tel:+36703682132" className="block transition hover:text-white">
                   Telefon: +36 70 368 2132

@@ -261,7 +261,7 @@ export default function AdminPage() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(pb.authStore.isValid && pb.authStore.model));
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'coupons'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'coupons' | 'products'>('orders');
   const [savedEmailLog, setSavedEmailLog] = useState<EmailLogEntry[]>(() => {
     if (typeof window === 'undefined') {
       return [];
@@ -646,7 +646,7 @@ export default function AdminPage() {
         title: productForm.product_title.trim() || selectedProduct.title,
         price,
         sale_price: salePrice,
-        stock: Math.max(0, Number(productForm.stock ?? 0)),
+        stock: productForm.is_out_of_stock ? 0 : Math.max(0, Number(productForm.stock ?? 0)),
         is_out_of_stock: Boolean(productForm.is_out_of_stock),
         description: productForm.description,
       });
@@ -914,11 +914,12 @@ export default function AdminPage() {
             { key: 'orders', label: 'Rendelések' },
             { key: 'invoices', label: 'Számlák' },
             { key: 'coupons', label: 'Kuponok' },
+            { key: 'products', label: 'Termékek' },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'coupons')}
+              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'coupons' | 'products')}
               className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
                 activeTab === tab.key
                   ? 'bg-[#2d2922] text-white'
@@ -1340,8 +1341,10 @@ export default function AdminPage() {
           </section>
         )}
 
-        {activeTab === 'coupons' && (
+        {(activeTab === 'coupons' || activeTab === 'products') && (
           <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
+            {activeTab === 'coupons' && (
+              <>
             <div className="mb-6 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">Kuponok</p>
@@ -1583,8 +1586,11 @@ export default function AdminPage() {
                 ))
               )}
             </div>
+              </>
+            )}
 
-            <div className="mt-8 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5">
+            {activeTab === 'products' && (
+              <div className="rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h3 className="text-xl font-medium tracking-[-0.04em] text-[#2d2922]">Termékek leárazása és állapota</h3>
                 <div className="rounded-full bg-[#f2eadc] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6b5539]">
@@ -1624,7 +1630,8 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
-            </div>
+              </div>
+            )}
           </section>
         )}
 

@@ -568,6 +568,7 @@ export default function HomePage() {
                     : heroImage;
 
                   const isJustAdded = addedId === product.id;
+                  const isOutOfStock = Boolean(product.is_out_of_stock);
 
                   const category = resolveProductCategory(product);
 
@@ -596,21 +597,34 @@ export default function HomePage() {
                           </span>
                         </div>
 
+                        {isOutOfStock ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-[#27231e]/35">
+                            <span className="bg-[#f7f4ed] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#5b4435] shadow-sm">
+                              Elfogyott
+                            </span>
+                          </div>
+                        ) : null}
+
                         <div className="absolute bottom-4 right-4">
                           <button
                             type="button"
+                            disabled={isOutOfStock}
                             onClick={(event) => {
                               event.stopPropagation();
                               handleAddToCart(product);
                             }}
-                            aria-label={`${product.title} hozzáadása a kosárhoz`}
+                            aria-label={isOutOfStock ? `${product.title} elfogyott` : `${product.title} hozzáadása a kosárhoz`}
                             className={`flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition ${
-                              isJustAdded
+                              isOutOfStock
+                                ? 'cursor-not-allowed bg-[#d8d0c5] text-[#85796c]'
+                                : isJustAdded
                                 ? 'bg-[#506b4d] text-white'
                                 : 'bg-white text-[#28251f] hover:scale-105'
                             }`}
                           >
-                            {isJustAdded ? (
+                            {isOutOfStock ? (
+                              <X className="h-4 w-4" />
+                            ) : isJustAdded ? (
                               <Check className="h-4 w-4" />
                             ) : (
                               <Plus className="h-4 w-4" />
@@ -700,6 +714,11 @@ export default function HomePage() {
                     <p className="mt-4 text-xl font-semibold text-[#2d2923] sm:text-2xl">
                       {getEffectiveProductPrice(selectedProduct).toLocaleString('hu-HU')} Ft
                     </p>
+                    {selectedProduct.is_out_of_stock ? (
+                      <p className="mt-3 text-sm font-semibold uppercase tracking-[0.16em] text-[#9a5c3f]">
+                        Elfogyott
+                      </p>
+                    ) : null}
                     {typeof selectedProduct.sale_price === 'number' && selectedProduct.sale_price > 0 && selectedProduct.sale_price < selectedProduct.price ? (
                       <p className="mt-1 text-sm text-[#8d7c69] line-through">
                         {selectedProduct.price.toLocaleString('hu-HU')} Ft
@@ -708,13 +727,14 @@ export default function HomePage() {
 
                     <button
                       type="button"
+                      disabled={Boolean(selectedProduct.is_out_of_stock)}
                       onClick={() => {
                         handleAddToCart(selectedProduct);
                         closeProductModal();
                       }}
-                      className="mt-5 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1d1a17] sm:mt-6 sm:px-5 sm:py-3"
+                      className="mt-5 inline-flex items-center justify-center rounded-full bg-[#2d2923] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1d1a17] disabled:cursor-not-allowed disabled:bg-[#c9c0b5] disabled:text-[#817568] sm:mt-6 sm:px-5 sm:py-3"
                     >
-                      Kosárba
+                      {selectedProduct.is_out_of_stock ? 'Elfogyott' : 'Kosárba'}
                     </button>
                   </div>
 

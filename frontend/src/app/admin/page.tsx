@@ -1378,7 +1378,15 @@ export default function AdminPage() {
                 <span className="mb-2 block text-sm font-medium text-[#4c453d]">Kedvezmény típusa</span>
                 <select
                   value={couponForm.discount_type}
-                  onChange={(event) => setCouponForm((current) => ({ ...current, discount_type: event.target.value as 'percent' | 'amount' }))}
+                  onChange={(event) => {
+                    const discountType = event.target.value as 'percent' | 'amount';
+                    setCouponForm((current) => ({
+                      ...current,
+                      discount_type: discountType,
+                      discount_percent: discountType === 'percent' ? (current.discount_percent || 10) : 0,
+                      discount_amount: discountType === 'amount' ? current.discount_amount : 0,
+                    }));
+                  }}
                   className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
                 >
                   <option value="percent">Százalékos</option>
@@ -1412,7 +1420,7 @@ export default function AdminPage() {
               </label>
 
               <label className="block xl:col-span-1">
-                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Termék (opcionális)</span>
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Kupon hatóköre</span>
                 <select
                   value={couponForm.product_id}
                   onChange={(event) => {
@@ -1426,7 +1434,7 @@ export default function AdminPage() {
                   }}
                   className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
                 >
-                  <option value="">Minden termék</option>
+                  <option value="">Teljes kosár</option>
                   {productsForAdmin.map((product) => (
                     <option key={product.id} value={product.id}>{product.title}</option>
                   ))}
@@ -1615,7 +1623,10 @@ export default function AdminPage() {
                           ? `${Number(coupon.discount_percent)}%`
                           : `${Number(coupon.discount_amount ?? 0).toLocaleString('hu-HU')} Ft`}
                       </div>
-                      {coupon.product_id ? <div><span className="font-medium text-[#2d2922]">Termék:</span> {coupon.product_title || coupon.product_id}</div> : null}
+                      <div>
+                        <span className="font-medium text-[#2d2922]">Hatókör:</span>{' '}
+                        {coupon.product_id ? `Konkrét termék: ${coupon.product_title || coupon.product_id}` : 'Teljes kosár'}
+                      </div>
                       <div><span className="font-medium text-[#2d2922]">Leírás:</span> {coupon.description || 'Nincs megadva'}</div>
                     </div>
                     <div className="mt-4 flex gap-2">

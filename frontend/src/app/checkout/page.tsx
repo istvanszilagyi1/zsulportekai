@@ -889,7 +889,12 @@ export default function CheckoutPage() {
                 {couponError ? (
                   <p className="mt-2 text-xs text-[#8e4a2d]">{couponError}</p>
                 ) : appliedCoupon ? (
-                  <p className="mt-2 text-xs text-[#356b42]">Kupon aktiválva: {appliedCoupon.code} ({appliedCoupon.discount_percent}% kedvezmény)</p>
+                  <p className="mt-2 text-xs text-[#356b42]">
+                    Kupon aktiválva: {appliedCoupon.code} ({Number(appliedCoupon.discount_percent ?? 0) > 0
+                      ? `${appliedCoupon.discount_percent}% kedvezmény`
+                      : `${Number(appliedCoupon.discount_amount ?? 0).toLocaleString('hu-HU')} Ft kedvezmény`})
+                    {appliedCoupon.product_id ? `, csak erre: ${appliedCoupon.product_title || 'kiválasztott termék'}` : ', a teljes kosárra'}
+                  </p>
                 ) : (
                   <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[#7b756b]">
                     Add meg a kuponkódot a kedvezmény érvényesítéséhez.

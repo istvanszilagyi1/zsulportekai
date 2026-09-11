@@ -573,7 +573,7 @@ export default function AdminPage() {
     try {
       const payload = {
         code: normalizedCode,
-        discount_percent: couponForm.discount_type === 'percent' ? Number(couponForm.discount_percent ?? 0) : 0,
+        discount_percent: couponForm.discount_type === 'percent' ? Number(couponForm.discount_percent ?? 0) : undefined,
         discount_amount: couponForm.discount_type === 'amount' ? Number(couponForm.discount_amount ?? 0) : 0,
         product_id: normalizedProductId,
         product_title: couponForm.product_title.trim(),

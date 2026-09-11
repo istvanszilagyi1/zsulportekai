@@ -1,7 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 migrate((app) => {
-  const couponsCollection = app.findCollectionByNameOrId('pbc_coupons_01');
+  const couponsCollection = app.findCollectionByNameOrId('coupons');
   if (!couponsCollection) return;
 
   if (!couponsCollection.fields.getByName('discount_amount')) {
@@ -39,6 +39,4 @@ migrate((app) => {
   }
 
   app.save(couponsCollection);
-}, (app) => {
-  // Fields are intentionally kept on rollback because earlier migrations may own them.
-});
+}, () => {});

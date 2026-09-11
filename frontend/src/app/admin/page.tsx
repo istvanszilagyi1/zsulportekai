@@ -591,7 +591,15 @@ export default function AdminPage() {
       await fetchCoupons();
     } catch (error) {
       console.error('Kupon mentése sikertelen:', error);
-      window.alert('A kupon mentése sikertelen volt.');
+      const responseData = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: Record<string, { message?: string }> } }).response?.data
+        : undefined;
+      const fieldErrors = responseData
+        ? Object.entries(responseData)
+          .map(([field, detail]) => `${field}: ${detail?.message || 'érvénytelen érték'}`)
+          .join('\n')
+        : '';
+      window.alert(`A kupon mentése sikertelen volt.${fieldErrors ? `\n\n${fieldErrors}` : ''}`);
     }
   };
 

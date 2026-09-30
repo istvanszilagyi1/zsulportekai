@@ -17,22 +17,24 @@ export async function GET(request: Request) {
       sort: '-created',
     });
 
-    const coupon = records[0];
-    if (!coupon) {
+    if (!records.length) {
       return NextResponse.json({ valid: false, error: 'Érvénytelen vagy inaktív kuponkód.' }, { status: 404 });
     }
 
+    const coupons = records.map((coupon) => ({
+      id: coupon.id,
+      code: String(coupon.code || '').toUpperCase(),
+      discount_percent: Number(coupon.discount_percent ?? 0),
+      discount_amount: Number(coupon.discount_amount ?? 0),
+      product_id: coupon.product_id ? String(coupon.product_id) : '',
+      product_title: coupon.product_title ? String(coupon.product_title) : '',
+      description: coupon.description ?? '',
+    }));
+
     return NextResponse.json({
       valid: true,
-      coupon: {
-        id: coupon.id,
-        code: String(coupon.code || '').toUpperCase(),
-        discount_percent: Number(coupon.discount_percent ?? 0),
-        discount_amount: Number(coupon.discount_amount ?? 0),
-        product_id: coupon.product_id ? String(coupon.product_id) : '',
-        product_title: coupon.product_title ? String(coupon.product_title) : '',
-        description: coupon.description ?? '',
-      },
+      coupon: coupons[0],
+      coupons,
     });
   } catch (error) {
     console.error('Coupon validation failed:', error);

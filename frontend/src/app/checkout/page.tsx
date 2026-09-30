@@ -149,44 +149,36 @@ export default function CheckoutPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [couponError, setCouponError] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<CouponRecord | null>(null);
+  const [appliedCoupons, setAppliedCoupons] = useState<CouponRecord[]>([]);
   const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
   const [error, setError] = useState('');
 
   const shippingCost = DELIVERY_FEES[deliveryMethod];
   const couponDiscount = useMemo(() => {
-    if (!appliedCoupon) {
+    if (!appliedCoupons.length) {
       return 0;
     }
 
-    const percentAmount = Number(appliedCoupon.discount_percent || 0);
-    const fixedAmount = Number(appliedCoupon.discount_amount || 0);
-
-    if (appliedCoupon.product_id) {
-      const matchingProductTotal = cart.reduce((sum, { product, quantity }) => {
-        if (product.id === appliedCoupon.product_id) {
-          return sum + getEffectiveProductPrice(product) * quantity;
-        }
-        return sum;
-      }, 0);
-
-      if (!matchingProductTotal) {
-        return 0;
-      }
-
+    const discount = appliedCoupons.reduce((sum, coupon) => {
+      const matchingProductTotal = coupon.product_id
+        ? cart.reduce((productSum, { product, quantity }) => (
+            product.id === coupon.product_id
+              ? productSum + getEffectiveProductPrice(product) * quantity
+              : productSum
+          ), 0)
+        : totalPrice;
+      const percentAmount = Number(coupon.discount_percent || 0);
+      const fixedAmount = Number(coupon.discount_amount || 0);
       const percentDiscount = percentAmount
         ? Math.round(matchingProductTotal * (percentAmount / 100))
         : 0;
       const fixedDiscount = fixedAmount ? Math.round(fixedAmount) : 0;
 
-      return Math.min(matchingProductTotal, percentDiscount + fixedDiscount);
-    }
+      return sum + Math.min(matchingProductTotal, percentDiscount + fixedDiscount);
+    }, 0);
 
-    const cartPercentDiscount = percentAmount ? Math.round(totalPrice * (percentAmount / 100)) : 0;
-    const cartFixedDiscount = fixedAmount ? Math.round(fixedAmount) : 0;
-
-    return Math.min(totalPrice, cartPercentDiscount + cartFixedDiscount);
-  }, [appliedCoupon, cart, totalPrice]);
+    return Math.min(totalPrice, discount);
+  }, [appliedCoupons, cart, totalPrice]);
   const subtotalAfterDiscount = Math.max(0, totalPrice - couponDiscount);
   const orderTotal = useMemo(() => Math.round(subtotalAfterDiscount + shippingCost), [subtotalAfterDiscount, shippingCost]);
 
@@ -201,7 +193,7 @@ export default function CheckoutPage() {
     setCouponError('');
 
     if (!code) {
-      setAppliedCoupon(null);
+      setAppliedCoupons([]);
       return;
     }
 
@@ -211,22 +203,30 @@ export default function CheckoutPage() {
       const response = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`);
       const payload = await response.json();
 
-      if (!response.ok || !payload?.valid || !payload?.coupon) {
-        setAppliedCoupon(null);
+      const coupons = Array.isArray(payload?.coupons)
+        ? payload.coupons as CouponRecord[]
+        : payload?.coupon ? [payload.coupon as CouponRecord] : [];
+
+      if (!response.ok || !payload?.valid || !coupons.length) {
+        setAppliedCoupons([]);
         setCouponError(payload?.error || 'Érvénytelen kuponkód.');
         return;
       }
 
-      if (payload.coupon.product_id && !cart.some((item) => item.product.id === payload.coupon.product_id)) {
-        setAppliedCoupon(null);
+      const applicableCoupons = coupons.filter((coupon) => (
+        !coupon.product_id || cart.some((item) => item.product.id === coupon.product_id)
+      ));
+
+      if (!applicableCoupons.length) {
+        setAppliedCoupons([]);
         setCouponError('Ez a kupon a kosárban lévő termékre nem alkalmazható.');
         return;
       }
 
-      setAppliedCoupon(payload.coupon);
+      setAppliedCoupons(applicableCoupons);
       setCouponError('');
     } catch {
-      setAppliedCoupon(null);
+      setAppliedCoupons([]);
       setCouponError('A kupon ellenőrzése sikertelen volt.');
     } finally {
       setIsCheckingCoupon(false);
@@ -265,7 +265,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (formData.couponCode.trim() && !appliedCoupon) {
+    if (formData.couponCode.trim() && !appliedCoupons.length) {
       setError('A kuponkód érvényesítése szükséges a rendelés előtt.');
       return;
     }
@@ -310,11 +310,13 @@ export default function CheckoutPage() {
         invoice_tax_number: formData.wantsInvoice ? formData.taxNumber.trim() : undefined,
         invoice_address: invoiceAddress,
         invoice_email: formData.wantsInvoice ? formData.invoiceEmail.trim() || formData.email.trim() : undefined,
-        coupon_code: appliedCoupon?.code || undefined,
-        coupon_discount_percent: appliedCoupon ? Number(appliedCoupon.discount_percent || 0) : undefined,
-        coupon_discount_amount: appliedCoupon ? Math.round(couponDiscount) : undefined,
-        coupon_product_id: appliedCoupon?.product_id || undefined,
-        coupon_product_title: appliedCoupon?.product_title || undefined,
+        coupon_code: appliedCoupons[0]?.code || undefined,
+        coupon_discount_percent: appliedCoupons.every((coupon) => coupon.discount_percent === appliedCoupons[0]?.discount_percent)
+          ? Number(appliedCoupons[0]?.discount_percent || 0)
+          : 0,
+        coupon_discount_amount: appliedCoupons.length ? Math.round(couponDiscount) : undefined,
+        coupon_product_id: appliedCoupons.length === 1 ? appliedCoupons[0].product_id || undefined : undefined,
+        coupon_product_title: [...new Set(appliedCoupons.map((coupon) => coupon.product_title).filter(Boolean))].join(', ') || undefined,
         items: cart.map(({ product, quantity }) => ({
           id: product.id,
           title: product.title,
@@ -867,8 +869,8 @@ export default function CheckoutPage() {
                     value={formData.couponCode}
                     onChange={(event) => {
                       updateField('couponCode', event.target.value);
-                      if (appliedCoupon && event.target.value.trim().toUpperCase() !== appliedCoupon.code.toUpperCase()) {
-                        setAppliedCoupon(null);
+                      if (appliedCoupons.length && event.target.value.trim().toUpperCase() !== appliedCoupons[0].code.toUpperCase()) {
+                        setAppliedCoupons([]);
                       }
                       if (couponError) {
                         setCouponError('');
@@ -888,12 +890,12 @@ export default function CheckoutPage() {
                 </div>
                 {couponError ? (
                   <p className="mt-2 text-xs text-[#8e4a2d]">{couponError}</p>
-                ) : appliedCoupon ? (
+                ) : appliedCoupons.length ? (
                   <p className="mt-2 text-xs text-[#356b42]">
-                    Kupon aktiválva: {appliedCoupon.code} ({Number(appliedCoupon.discount_percent ?? 0) > 0
-                      ? `${appliedCoupon.discount_percent}% kedvezmény`
-                      : `${Number(appliedCoupon.discount_amount ?? 0).toLocaleString('hu-HU')} Ft kedvezmény`})
-                    {appliedCoupon.product_id ? `, csak erre: ${appliedCoupon.product_title || 'kiválasztott termék'}` : ', a teljes kosárra'}
+                    Kupon aktiválva: {appliedCoupons[0].code} ({formatMoney(couponDiscount)} kedvezmény)
+                    {appliedCoupons.some((coupon) => coupon.product_id)
+                      ? `, érintett termékek: ${[...new Set(appliedCoupons.map((coupon) => coupon.product_title).filter(Boolean))].join(', ')}`
+                      : ', a teljes kosárra'}
                   </p>
                 ) : (
                   <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[#7b756b]">

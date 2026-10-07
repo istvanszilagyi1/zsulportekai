@@ -26,6 +26,15 @@ type ProductRecord = Product & {
   image?: string;
 };
 
+type LocationRecord = {
+  id: string;
+  name: string;
+  category: 'market' | 'reseller';
+  address: string;
+  description?: string;
+  schedule?: string;
+};
+
 const logoUrl =
   'https://4e95f92e87.clvaw-cdnwnd.com/389d5bb8ea9eaf71fc35b4ed841e1326/200000204-8933c8933e/450/Zs%C3%BCl%20port%C3%A9k%C3%A1i%20logo.webp?ph=4e95f92e87';
 
@@ -363,6 +372,9 @@ function categoryName(category: CategoryFilter) {
 
 export default function HomePage() {
   const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [locations, setLocations] = useState<LocationRecord[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsLoadError, setLocationsLoadError] = useState(false);
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryFilter>('all');
   const [loading, setLoading] = useState(true);
@@ -393,6 +405,30 @@ export default function HomePage() {
 
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    async function fetchLocations() {
+      try {
+        const response = await fetch('/api/locations', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`A helyszínek lekérdezése sikertelen: ${response.status}`);
+        }
+
+        const records = (await response.json()) as LocationRecord[];
+        setLocations(records);
+      } catch (error) {
+        console.error('Hiba a helyszínek betöltésekor:', error);
+        setLocationsLoadError(true);
+      } finally {
+        setLocationsLoading(false);
+      }
+    }
+
+    fetchLocations();
+  }, []);
+
+  const marketLocations = locations.filter((location) => location.category === 'market');
+  const resellerLocations = locations.filter((location) => location.category === 'reseller');
 
   const visibleProducts = useMemo(() => {
     if (!products.length) {
@@ -917,39 +953,83 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-[24px] bg-[#f8f4ee] p-5 sm:p-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#796f62]">
-                  Piaci jelenlétünk
-                </p>
+            <div className="grid gap-8 lg:grid-cols-2">
+              {[
+                { title: 'Piaci jelenlétünk', records: marketLocations, dark: false },
+                { title: 'Viszonteladó partnereink', records: resellerLocations, dark: true },
+              ].map(({ title, records, dark }) => (
+                <div
+                  key={title}
+                  className={`rounded-[24px] p-5 sm:p-6 ${dark ? 'bg-[#2d2923] text-[#f7f4ed]' : 'bg-[#f8f4ee] text-[#2a2723]'}`}
+                >
+                  <p className={`text-[10px] font-semibold uppercase tracking-[0.25em] ${dark ? 'text-white/60' : 'text-[#796f62]'}`}>
+                    {title}
+                  </p>
+                  <div className="mt-5 space-y-4">
+                    {records.map((location) => {
+                      const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(location.address)}&z=15&output=embed`;
 
-                <ul className="mt-6 space-y-4 text-sm leading-7 text-[#4b453f]">
-                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap első szombatján:</strong> Debrecen Liget tér 8–11.30, Debrecen Kerekestelep Platán hotel melletti játszótér 8–11.30</li>
-                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap második péntekjén:</strong> Hajdúböszörmény Ady téri piac 7–11</li>
-                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap második szombatján:</strong> Debrecen Ruyter utca, Derce pékműhely udvara 8–11.30; Hajdúböszörmény Fürdőkerti vásár, Bíró Péter utca 7–12; Újfehértó Zsindelyes Cottage termelői piac 8–11.30</li>
-                  <li><strong className="font-semibold text-[#2a2723]">Minden hónap harmadik szombatján:</strong> Debrecen Leány utca 2, egyháztáji vásár 8–11.30</li>
-                  <li><strong className="font-semibold text-[#2a2723]">Minden vasárnap:</strong> Balmazújvárosi piac 7–11</li>
-                </ul>
-
-                <p className="mt-6 text-sm leading-7 text-[#5e584f]">
-                  A vásári jelenlétünk hónapról hónapra frissül, az időpontokat és a pontos helyszíneket Facebook oldalunkon találod meg.
-                </p>
-              </div>
-
-              <div className="rounded-[24px] bg-[#2d2923] p-5 text-[#f7f4ed] sm:p-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/60">
-                  Viszonteladó partnereink
-                </p>
-
-                <ul className="mt-6 space-y-4 text-sm leading-7 text-white/80">
-                  <li>Hajdúböszörmény – Csuporka bolt, Petőfi Sándor utca 15.</li>
-                  <li>Hajdúböszörmény – Kálvin téri zöldséges bolt, Kálvin tér 20.</li>
-                  <li>Hajdúböszörmény – Mosolygó zöldség-gyümölcs, Külső-Hadházi utca 19.</li>
-                  <li>Józsai piac – Tóth Józsefné viszonteladó, kedd, csütörtök, péntek.</li>
-                  <li>Hajdúhadház piac – Tóth Józsefné viszonteladó, szombatonként.</li>
-                  <li>Debrecen – Egyháztáji Delikátesz, Hatvan utca 1/A.</li>
-                </ul>
-              </div>
+                      return (
+                        <article
+                          key={location.id}
+                          className={`overflow-hidden rounded-[20px] ${dark ? 'bg-white/6' : 'bg-white'}`}
+                        >
+                          <div className="grid sm:grid-cols-[0.9fr_1.1fr]">
+                            <div className="min-h-48 overflow-hidden bg-[#e7dfd1]">
+                              <iframe
+                                title={`Térkép: ${location.name}`}
+                                src={mapUrl}
+                                className="h-full min-h-48 w-full border-0"
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                              />
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-base font-semibold">{location.name}</h3>
+                              <p className={`mt-1 text-sm ${dark ? 'text-white/70' : 'text-[#625a50]'}`}>
+                                {location.address}
+                              </p>
+                              {location.description && (
+                                <p className={`mt-3 text-sm leading-6 ${dark ? 'text-white/80' : 'text-[#4b453f]'}`}>
+                                  {location.description}
+                                </p>
+                              )}
+                              {location.schedule && (
+                                <p className={`mt-3 text-xs font-semibold leading-5 ${dark ? 'text-white/60' : 'text-[#796f62]'}`}>
+                                  {location.schedule}
+                                </p>
+                              )}
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`mt-3 inline-block text-xs font-semibold underline underline-offset-4 ${dark ? 'text-white/80' : 'text-[#6c543b]'}`}
+                              >
+                                Megnyitás a Google Térképen
+                              </a>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                    {locationsLoadError && records.length === 0 && (
+                      <p className={`text-sm ${dark ? 'text-white/70' : 'text-[#625a50]'}`}>
+                        A helyszínek most nem tölthetők be. Kérjük, próbáld újra később.
+                      </p>
+                    )}
+                    {locationsLoading && records.length === 0 && (
+                      <p className={`text-sm ${dark ? 'text-white/70' : 'text-[#625a50]'}`}>
+                        Helyszínek betöltése...
+                      </p>
+                    )}
+                    {!locationsLoading && !locationsLoadError && records.length === 0 && (
+                      <p className={`text-sm ${dark ? 'text-white/70' : 'text-[#625a50]'}`}>
+                        Jelenleg nincs megjeleníthető helyszín.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

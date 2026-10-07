@@ -10,7 +10,9 @@ import {
   LockKeyhole,
   LogOut,
   MailCheck,
+  MapPin,
   Package,
+  Plus,
   Search,
   X,
 } from 'lucide-react';
@@ -101,6 +103,19 @@ type ProductAdminRecord = {
   description?: string;
   image?: string;
 };
+
+type LocationAdminRecord = {
+  id: string;
+  name: string;
+  category: 'market' | 'reseller';
+  address: string;
+  description: string;
+  schedule: string;
+  active: boolean;
+  sort_order: number;
+};
+
+type LocationForm = Omit<LocationAdminRecord, 'id'> & { id: string };
 
 const ORDER_STATUS_OPTIONS: OrderStatus[] = [
   'pending',
@@ -261,7 +276,7 @@ export default function AdminPage() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(pb.authStore.isValid && pb.authStore.model));
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'coupons' | 'products'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'invoices' | 'coupons' | 'products' | 'locations'>('orders');
   const [savedEmailLog, setSavedEmailLog] = useState<EmailLogEntry[]>(() => {
     if (typeof window === 'undefined') {
       return [];
@@ -277,6 +292,18 @@ export default function AdminPage() {
   const [persistedEmailLog, setPersistedEmailLog] = useState<EmailLogEntry[]>([]);
   const [coupons, setCoupons] = useState<CouponRecord[]>([]);
   const [productsForAdmin, setProductsForAdmin] = useState<ProductAdminRecord[]>([]);
+  const [locationsForAdmin, setLocationsForAdmin] = useState<LocationAdminRecord[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locationForm, setLocationForm] = useState<LocationForm>({
+    id: '',
+    name: '',
+    category: 'market',
+    address: '',
+    description: '',
+    schedule: '',
+    active: true,
+    sort_order: 0,
+  });
   const [couponForm, setCouponForm] = useState({
     id: '',
     code: '',
@@ -366,6 +393,33 @@ export default function AdminPage() {
     }
   };
 
+  const fetchLocations = async () => {
+    setLocationsLoading(true);
+
+    try {
+      const records = await pb.collection('locations').getFullList({
+        sort: 'category,sort_order,name',
+      });
+
+      setLocationsForAdmin((records as Array<Record<string, unknown>>).map((record) => ({
+        id: String(record.id ?? ''),
+        name: String(record.name ?? ''),
+        category: record.category === 'reseller' ? 'reseller' : 'market',
+        address: String(record.address ?? ''),
+        description: String(record.description ?? ''),
+        schedule: String(record.schedule ?? ''),
+        active: Boolean(record.active),
+        sort_order: Number(record.sort_order ?? 0),
+      })));
+    } catch (error) {
+      console.error('Helyszínek betöltése sikertelen:', error);
+      setLocationsForAdmin([]);
+      window.alert('A helyszínek betöltése sikertelen volt. Ellenőrizd a PocketBase locations kollekcióját.');
+    } finally {
+      setLocationsLoading(false);
+    }
+  };
+
   const fetchEmailLogs = async () => {
     try {
       const records = await pb.collection('email_logs').getFullList({ sort: '-sent_at', perPage: 60 });
@@ -399,6 +453,7 @@ export default function AdminPage() {
     fetchCoupons();
     fetchProductsForAdmin();
     fetchEmailLogs();
+    fetchLocations();
   }, [isAuthenticated]);
 
   const emailLog = useMemo<EmailLogEntry[]>(() => {
@@ -635,6 +690,74 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Kupon törlése sikertelen:', error);
       window.alert('A kupon törlése sikertelen volt.');
+    }
+  };
+
+  const handleSaveLocation = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!locationForm.name.trim() || !locationForm.address.trim()) {
+      window.alert('A helyszín neve és címe kötelező.');
+      return;
+    }
+
+    const payload = {
+      name: locationForm.name.trim(),
+      category: locationForm.category,
+      address: locationForm.address.trim(),
+      description: locationForm.description.trim(),
+      schedule: locationForm.schedule.trim(),
+      active: locationForm.active,
+      sort_order: Number(locationForm.sort_order) || 0,
+    };
+
+    try {
+      if (locationForm.id) {
+        await pb.collection('locations').update(locationForm.id, payload);
+      } else {
+        await pb.collection('locations').create(payload);
+      }
+
+      setLocationForm({
+        id: '',
+        name: '',
+        category: 'market',
+        address: '',
+        description: '',
+        schedule: '',
+        active: true,
+        sort_order: 0,
+      });
+      await fetchLocations();
+    } catch (error) {
+      console.error('Helyszín mentése sikertelen:', error);
+      window.alert('A helyszín mentése sikertelen volt.');
+    }
+  };
+
+  const handleDeleteLocation = async (location: LocationAdminRecord) => {
+    if (!window.confirm(`Biztosan törlöd ezt a helyszínt: ${location.name}?`)) {
+      return;
+    }
+
+    try {
+      await pb.collection('locations').delete(location.id);
+      setLocationsForAdmin((current) => current.filter((item) => item.id !== location.id));
+      if (locationForm.id === location.id) {
+        setLocationForm({
+          id: '',
+          name: '',
+          category: 'market',
+          address: '',
+          description: '',
+          schedule: '',
+          active: true,
+          sort_order: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Helyszín törlése sikertelen:', error);
+      window.alert('A helyszín törlése sikertelen volt.');
     }
   };
 
@@ -931,11 +1054,12 @@ export default function AdminPage() {
             { key: 'invoices', label: 'Számlák' },
             { key: 'coupons', label: 'Kuponok' },
             { key: 'products', label: 'Termékek' },
+            { key: 'locations', label: 'Helyszínek' },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'coupons' | 'products')}
+              onClick={() => setActiveTab(tab.key as 'orders' | 'invoices' | 'coupons' | 'products' | 'locations')}
               className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
                 activeTab === tab.key
                   ? 'bg-[#2d2922] text-white'
@@ -1298,6 +1422,187 @@ export default function AdminPage() {
           </div>
         </section>
           </>
+        )}
+
+        {activeTab === 'locations' && (
+          <section className="rounded-[28px] border border-[#e3ded3] bg-white p-6 shadow-[0_18px_40px_rgba(35,28,21,0.04)]">
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#827a6d]">Piacok és partnerek</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-[-0.05em] text-[#2d2922]">Helyszínek kezelése</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b625b]">
+                  A módosítások a „Hol találkozhatsz velünk?” részen jelennek meg. A térkép a megadott cím alapján frissül.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLocationForm({
+                  id: '',
+                  name: '',
+                  category: 'market',
+                  address: '',
+                  description: '',
+                  schedule: '',
+                  active: true,
+                  sort_order: locationsForAdmin.length + 1,
+                })}
+                className="inline-flex items-center gap-2 rounded-full border border-[#ddd0c0] bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+              >
+                <Plus className="h-4 w-4" />
+                Új helyszín
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLocation} className="mb-8 grid gap-4 rounded-[24px] border border-[#e3ded3] bg-[#faf7f2] p-5 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Megnevezés</span>
+                <input
+                  value={locationForm.name}
+                  onChange={(event) => setLocationForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Debrecen – Liget tér"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Típus</span>
+                <select
+                  value={locationForm.category}
+                  onChange={(event) => setLocationForm((current) => ({ ...current, category: event.target.value as LocationAdminRecord['category'] }))}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                >
+                  <option value="market">Piac / vásár</option>
+                  <option value="reseller">Viszonteladó</option>
+                </select>
+              </label>
+
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Cím (ezt használja a térkép)</span>
+                <input
+                  value={locationForm.address}
+                  onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))}
+                  placeholder="Város, utca, házszám vagy helyszín"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                  required
+                />
+              </label>
+
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Leírás</span>
+                <textarea
+                  value={locationForm.description}
+                  onChange={(event) => setLocationForm((current) => ({ ...current, description: event.target.value }))}
+                  rows={3}
+                  placeholder="Rövid információ a helyszínről"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Időpont / nyitvatartás</span>
+                <input
+                  value={locationForm.schedule}
+                  onChange={(event) => setLocationForm((current) => ({ ...current, schedule: event.target.value }))}
+                  placeholder="Minden hónap első szombatján, 8:00–11:30"
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#4c453d]">Sorrend</span>
+                <input
+                  type="number"
+                  value={locationForm.sort_order}
+                  onChange={(event) => setLocationForm((current) => ({ ...current, sort_order: Number(event.target.value) }))}
+                  className="w-full rounded-2xl border border-[#dad0c3] bg-white px-4 py-3 text-sm text-[#2c2924] outline-none focus:border-[#2d2922]"
+                />
+              </label>
+
+              <div className="flex flex-wrap items-center gap-4 md:col-span-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#4c453d]">
+                  <input
+                    type="checkbox"
+                    checked={locationForm.active}
+                    onChange={(event) => setLocationForm((current) => ({ ...current, active: event.target.checked }))}
+                    className="h-4 w-4 accent-[#2d2922]"
+                  />
+                  Megjelenik a weboldalon
+                </label>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-full bg-[#2d2922] px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-[#1e1b18]"
+                >
+                  {locationForm.id ? 'Helyszín mentése' : 'Helyszín létrehozása'}
+                </button>
+                {locationForm.id && (
+                  <button
+                    type="button"
+                    onClick={() => setLocationForm({
+                      id: '',
+                      name: '',
+                      category: 'market',
+                      address: '',
+                      description: '',
+                      schedule: '',
+                      active: true,
+                      sort_order: locationsForAdmin.length + 1,
+                    })}
+                    className="rounded-full border border-[#ddd0c0] bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#2d2922]"
+                  >
+                    Mégse
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {locationsLoading ? (
+                <p className="text-sm text-[#6b625b]">Helyszínek betöltése...</p>
+              ) : locationsForAdmin.length === 0 ? (
+                <p className="rounded-[20px] border border-dashed border-[#d8cab1] bg-[#faf7f2] p-5 text-sm text-[#5d564f]">
+                  Még nincs helyszín. Ellenőrizd, hogy lefutott-e a PocketBase helyszínmigráció.
+                </p>
+              ) : (
+                locationsForAdmin.map((location) => (
+                  <article key={location.id} className="rounded-[22px] border border-[#e3ded3] bg-[#faf7f2] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 shrink-0 text-[#8a6845]" />
+                          <h3 className="font-semibold text-[#2d2922]">{location.name}</h3>
+                        </div>
+                        <p className="mt-2 text-sm text-[#4c453d]">{location.address}</p>
+                        {location.description && <p className="mt-2 text-sm leading-6 text-[#6b625b]">{location.description}</p>}
+                        {location.schedule && <p className="mt-2 text-xs font-semibold text-[#796f62]">{location.schedule}</p>}
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${location.active ? 'bg-[#eaf5eb] text-[#2a7b46]' : 'bg-[#fbe9e7] text-[#9a3c2c]'}`}>
+                        {location.active ? 'Aktív' : 'Rejtett'}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLocationForm(location)}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#d9d0c2] bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d2922] hover:border-[#a35e29]"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Szerkesztés
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLocation(location)}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#e7c4bc] bg-[#fff4f2] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b3d30] hover:border-[#af5646]"
+                      >
+                        <Delete className="h-3.5 w-3.5" />
+                        Törlés
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
         )}
 
         {activeTab === 'invoices' && (

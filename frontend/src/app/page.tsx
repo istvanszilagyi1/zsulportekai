@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import Header from '@/components/Header';
+import ProductGuide from '@/components/ProductGuide';
 import { useCart } from '@/context/CartContext';
 import { pb, getImageUrl } from '@/lib/pocketbase';
 import { getEffectiveProductPrice, type Product } from '@/types';
@@ -662,6 +663,8 @@ export default function HomePage() {
             )}
           </div>
         </section>
+
+        <ProductGuide />
 
         {selectedProduct ? (
           <div
